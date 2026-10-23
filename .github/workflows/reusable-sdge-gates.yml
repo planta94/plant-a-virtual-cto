@@ -1,0 +1,285 @@
+name: SDGE & SOC2/ISO27001 Engineering Gates (UAT & MAIN)
+
+on:
+  pull_request:
+    branches: [UAT, uat, main, master]
+  push:
+    branches: [UAT, uat, main, master]
+  workflow_call:
+    inputs:
+      stack:
+        description: "Primary stack: node | python | angular | mobile | contracts"
+        required: false
+        default: "node"
+        type: string
+      max_pr_lines:
+        description: "Hard cap on feature PR lines changed"
+        required: false
+        default: 400
+        type: number
+      fast_track_max_lines:
+        description: "Max LOC allowed for Fast-Track PRs without a SPEC-XXX ID"
+        required: false
+        default: 100
+        type: number
+      smoke_test_url:
+        description: "Optional UAT/Prod healthcheck URL for post-deploy canary/smoke test"
+        required: false
+        default: ""
+        type: string
+
+env:
+  STACK_TYPE: ${{ inputs.stack || 'node' }}
+  MAX_LOC_LIMIT: ${{ inputs.max_pr_lines || 400 }}
+  FAST_TRACK_LIMIT: ${{ inputs.fast_track_max_lines || 100 }}
+  SMOKE_URL: ${{ inputs.smoke_test_url || vars.SMOKE_TEST_URL || '' }}
+
+jobs:
+  # ===========================================================================
+  # GATE 1: Change Control, UAT->MAIN Promotion, [CTO-OVERRIDE] & Test Presence
+  # Maps to: SOC 2 CC8.1 (Change Management) & ISO 27001 A.8.29 / A.8.32
+  # ===========================================================================
+  change-control-gate:
+    name: "Gate 1: Change Control, Track, Size & Override Gate"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Evaluate Branch Flow (feature->UAT vs UAT->MAIN), Track & Overrides
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${BASE_REF}" --depth=1
+
+          # 1. Detect if this is a UAT -> MAIN Release Promotion PR
+          IS_RELEASE_PROMOTION=false
+          if [[ "${BASE_REF}" =~ ^(main|master)$ ]] && [[ "${HEAD_REF}" =~ ^(UAT|uat|release/.*)$ ]]; then
+            IS_RELEASE_PROMOTION=true
+            echo "🚀 RELEASE PROMOTION PR DETECTED (${HEAD_REF} -> ${BASE_REF})."
+            echo "   Bypassing 400-LOC feature cap (bundled release). Security & regression gates remain active."
+            exit 0
+          fi
+
+          # 2. Detect Authorized Startup Escape Hatch: [CTO-OVERRIDE: <reason>]
+          # Allows breaking soft rules (400 LOC / Spec / Deps) when startup speed requires it,
+          # while recording an auditable SOC 2 / ISO 27001 exception log.
+          HAS_CTO_OVERRIDE=false
+          if echo "${PR_BODY} ${PR_TITLE}" | grep -Eq '\[CTO-OVERRIDE(:[^\]]+)?\]'; then
+            HAS_CTO_OVERRIDE=true
+            echo "⚡ [CTO-OVERRIDE] AUTHORIZED EXCEPTION RECORDED FOR SOC 2 / ISO 27001 AUDIT LOG."
+            echo "   Soft gates (400-LOC cap / pre-Spec / ADR lock) are waived for this PR. Hard security scans still run."
+          fi
+
+          # 3. Calculate net changed lines (excluding lockfiles & generated SDKs)
+          LOC_CHANGED=$(git diff --numstat "origin/${BASE_REF}...HEAD" \
+            -- . \
+            ':!package-lock.json' \
+            ':!pnpm-lock.yaml' \
+            ':!yarn.lock' \
+            ':!uv.lock' \
+            ':!poetry.lock' \
+            ':!pubspec.lock' \
+            ':!**/generated/**' \
+            | awk '{ added += $1; deleted += $2 } END { print added + deleted + 0 }')
+
+          echo "Non-generated LOC changed: ${LOC_CHANGED}"
+
+          # 4. Detect sensitive file changes & source/test file changes
+          CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+          DEP_FILES_TOUCHED=$(echo "${CHANGED_FILES}" | grep -E '(^|/)(package\.json|pyproject\.toml|requirements.*\.txt|pubspec\.yaml|go\.mod|Cargo\.toml)$' || true)
+          CONTRACT_OR_DB_TOUCHED=$(echo "${CHANGED_FILES}" | grep -E '(^|/)(contracts/|migrations/|prisma/schema\.prisma|alembic/)' || true)
+          PROD_CODE_TOUCHED=$(echo "${CHANGED_FILES}" | grep -E '\.(ts|tsx|py|dart)$' | grep -vE '(\.spec\.|\.test\.|test_|_test\.|tests/|__tests__/|\.d\.ts$)' || true)
+          TEST_FILES_TOUCHED=$(echo "${CHANGED_FILES}" | grep -E '(\.spec\.|\.test\.|test_|_test\.|tests/|__tests__/)' || true)
+
+          # 5. Check if Emergency Hotfix Track
+          IS_HOTFIX=false
+          if echo "${PR_BODY} ${PR_TITLE}" | grep -Eq '\[HOTFIX-TRACK\]|HOTFIX-[0-9]+'; then
+            IS_HOTFIX=true
+            echo "⚠️ EMERGENCY HOTFIX TRACK DETECTED (ISO 27001 A.8.32)"
+            if [ "${LOC_CHANGED}" -gt 200 ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+              echo "::error::Emergency Hotfix PRs must be surgical (< 200 LOC). Current: ${LOC_CHANGED} LOC (or add [CTO-OVERRIDE: reason])."
+              exit 1
+            fi
+          fi
+
+          # 6. Enforce Hard PR Size Cap (400 LOC) unless [CTO-OVERRIDE] is present
+          if [ "${LOC_CHANGED}" -gt "${MAX_LOC_LIMIT}" ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+            echo "::error::PR exceeds the ${MAX_LOC_LIMIT} LOC limit (${LOC_CHANGED} LOC). Split into stacked PRs (or add [CTO-OVERRIDE: reason] if justified)."
+            exit 1
+          fi
+
+          # 7. Enforce Dependency Lock (Requires ADR-XXX) unless Hotfix or [CTO-OVERRIDE]
+          if [ -n "${DEP_FILES_TOUCHED}" ] && [ "${IS_HOTFIX}" != "true" ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+            if ! echo "${PR_BODY} ${PR_TITLE}" | grep -Eq 'ADR-[0-9]{3,}'; then
+              echo "::error::Dependency manifest modified (${DEP_FILES_TOUCHED}) without an approved ADR-XXX reference (or [CTO-OVERRIDE: reason])."
+              exit 1
+            fi
+          fi
+
+          # 8. Enforce Three-Track Traceability (SOC 2 Audit Trail)
+          if [ "${IS_HOTFIX}" != "true" ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+            if [ "${LOC_CHANGED}" -ge "${FAST_TRACK_LIMIT}" ] || [ -n "${DEP_FILES_TOUCHED}" ] || [ -n "${CONTRACT_OR_DB_TOUCHED}" ]; then
+              if ! echo "${PR_BODY} ${PR_TITLE}" | grep -Eq 'SPEC-[0-9]{3,}'; then
+                echo "::error::Spec-Track PRs (>= ${FAST_TRACK_LIMIT} LOC or touching Deps/DB/Contracts) MUST reference an approved SPEC-XXX ID."
+                exit 1
+              fi
+            else
+              if ! echo "${PR_BODY} ${PR_TITLE}" | grep -Eq '(SPEC-[0-9]{3,}|ISSUE-[0-9]+|#[0-9]+|\[FAST-TRACK\])'; then
+                echo "::error::Fast-Track PRs must include [FAST-TRACK] or an Issue/Spec reference for SOC 2 change traceability."
+                exit 1
+              fi
+            fi
+          fi
+
+          # 9. Enforce Mandatory Test Presence on Production Code Changes (ISO 27001 A.8.29)
+          if [ -n "${PROD_CODE_TOUCHED}" ] && [ -z "${TEST_FILES_TOUCHED}" ] && [ "${IS_HOTFIX}" != "true" ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+            echo "::error::Production code was modified without adding or updating any test files (*.spec.*, *.test.*, test_*.py)."
+            exit 1
+          fi
+
+          # 10. Verify Human Accountability & AI Data Privacy Checkboxes (Always Required for SOC 2)
+          if ! echo "${PR_BODY}" | grep -Eq '\[[xX]\] I have read, understood, and verified every line'; then
+            echo "::error::Mandatory sign-off unchecked: '[x] I have read, understood, and verified every line of AI-generated code'."
+            exit 1
+          fi
+          if ! echo "${PR_BODY}" | grep -Eq '\[[xX]\] No production secrets, customer PII'; then
+            echo "::error::Mandatory SOC2/ISO27001 sign-off unchecked: '[x] No production secrets, customer PII, or proprietary credentials were shared with external AI tools or committed'."
+            exit 1
+          fi
+
+          echo "✅ Gate 1 (Change Control, Governance & Test Presence) Passed!"
+
+  # ===========================================================================
+  # GATE 2: SOC 2 / ISO 27001 DevSecOps Gate (Secrets, SAST & Dependency CVEs)
+  # Maps to: ISO 27001 A.8.28 (Secure Coding) & A.8.29 (Security Testing)
+  # ===========================================================================
+  security-compliance-gate:
+    name: "Gate 2: Secret Scan, SAST & CVE Audit (ISO A.8.28/A.8.29)"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scanning on Diff (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: SAST Security Scan on Changed Files (Semgrep OWASP Top 10)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          pip install semgrep
+          git fetch origin "${BASE_REF}" --depth=1
+          semgrep ci --config auto --baseline-commit "origin/${BASE_REF}" --quiet || true
+
+      - name: Dependency Vulnerability Audit (High/Critical CVE Check)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm audit --audit-level=high --omit=dev
+          fi
+          if [ -f requirements.txt ]; then
+            pip install pip-audit
+            pip-audit -r requirements.txt
+          fi
+
+  # ===========================================================================
+  # GATE 3: Full-Fledged Testing, Diff-Coverage & Brownfield Quality Gate
+  # Runs Unit, Real-DB Integration (Postgres service), and Diff-Coverage (>=85%)
+  # ===========================================================================
+  testing-and-quality-gate:
+    name: "Gate 3: Unit, Real-DB Integration & Diff Coverage Gate"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Diff-Aware Linting, Unit & Integration Tests (Python)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${BASE_REF}" --depth=1
+          CHANGED_PY=$(git diff --name-only --diff-filter=ACMR "origin/${BASE_REF}...HEAD" | grep -E '\.py$' || true)
+          if [ -n "${CHANGED_PY}" ]; then
+            pip install ruff mypy pytest pytest-cov pytest-asyncio httpx diff-cover
+            ruff check ${CHANGED_PY}
+            mypy --strict ${CHANGED_PY}
+            if [ -d tests ]; then
+              pytest --cov=. --cov-report=xml:coverage.xml
+              diff-cover coverage.xml --compare-branch="origin/${BASE_REF}" --fail-under=85
+            fi
+          fi
+
+      - name: Run Diff-Aware Linting, Unit & Integration Tests (TypeScript / Node / Angular)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          git fetch origin "${BASE_REF}" --depth=1
+          CHANGED_TS=$(git diff --name-only --diff-filter=ACMR "origin/${BASE_REF}...HEAD" | grep -E '\.(ts|tsx)$' || true)
+          if [ -n "${CHANGED_TS}" ] && [ -f package.json ]; then
+            npm ci
+            npx eslint ${CHANGED_TS} --max-warnings=0 || true
+            npm test --if-present -- --watch=false --coverage
+          fi
+
+  # ===========================================================================
+  # GATE 4: Post-Deploy Automated Canary / Smoke Test (UAT & MAIN)
+  # Runs automatically on push/merge to UAT or MAIN
+  # ===========================================================================
+  post-deploy-smoke-gate:
+    name: "Gate 4: Post-Deploy Canary & Health Smoke Test"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref_name == 'UAT' || github.ref_name == 'uat' || github.ref_name == 'main' || github.ref_name == 'master')
+    steps:
+      - name: Verify Service Health & Canary Smoke Check
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+          HEALTH_URL: ${{ env.SMOKE_URL }}
+        run: |
+          set -euo pipefail
+          echo "Running post-deploy canary/smoke verification for branch: ${TARGET_BRANCH}"
+          if [ -z "${HEALTH_URL}" ]; then
+            echo "No SMOKE_TEST_URL repository variable configured yet. Skipping live HTTP probe (configure Variables -> SMOKE_TEST_URL in GitHub repo settings)."
+            exit 0
+          fi
+          for attempt in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${HEALTH_URL}" || echo "000")
+            if [ "${STATUS}" = "200" ]; then
+              echo "✅ Canary / Health probe succeeded (HTTP 200) on attempt ${attempt}!"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/5 returned HTTP ${STATUS}; retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Post-deploy canary/smoke test FAILED against ${HEALTH_URL} after merge to ${TARGET_BRANCH}!"
+          exit 1

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.internal.example.com/events/resource-created.v1.schema.json",
+  "title": "ResourceCreatedEvent",
+  "description": "Canonical CloudEvents-compatible async message envelope for microservice-to-microservice events.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "sourceService",
+    "occurredAt",
+    "traceId",
+    "payload"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique idempotency identifier for this event delivery."
+    },
+    "eventType": {
+      "type": "string",
+      "const": "resource.created"
+    },
+    "eventVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "sourceService": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "traceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resourceId", "name", "category"],
+      "properties": {
+        "resourceId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string",
+          "enum": ["STANDARD", "PRIORITY", "ARCHIVED"]
+        }
+      }
+    }
+  }
+}

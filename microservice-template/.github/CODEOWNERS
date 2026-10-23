@@ -1,0 +1,37 @@
+# =============================================================================
+# SDGE Automated Governance CODEOWNERS (With Backup / Deputy Approver)
+# Prevents CTO bottleneck and satisfies SOC 2 Segregation of Duties (when the
+# CTO writes code, @deputy-lead-handle can review & approve the CTO's PR).
+# Replace @cto-handle and @deputy-lead-handle with your actual GitHub usernames.
+# =============================================================================
+
+# 1. Dependency Lock (Hard Gate)
+package.json                    @cto-handle @deputy-lead-handle
+package-lock.json               @cto-handle @deputy-lead-handle
+pnpm-lock.yaml                  @cto-handle @deputy-lead-handle
+yarn.lock                       @cto-handle @deputy-lead-handle
+pyproject.toml                  @cto-handle @deputy-lead-handle
+requirements*.txt               @cto-handle @deputy-lead-handle
+uv.lock                         @cto-handle @deputy-lead-handle
+poetry.lock                     @cto-handle @deputy-lead-handle
+pubspec.yaml                    @cto-handle @deputy-lead-handle
+pubspec.lock                    @cto-handle @deputy-lead-handle
+
+# 2. AI Context & Governance Files
+/AGENTS.md                      @cto-handle @deputy-lead-handle
+/.github/                       @cto-handle @deputy-lead-handle
+/.gemini/                       @cto-handle @deputy-lead-handle
+/.cursorrules                   @cto-handle @deputy-lead-handle
+/CLAUDE.md                      @cto-handle @deputy-lead-handle
+/.pre-commit-config.yaml        @cto-handle @deputy-lead-handle
+
+# 3. Database Migrations & Schemas
+**/prisma/schema.prisma         @cto-handle @deputy-lead-handle
+**/migrations/**                @cto-handle @deputy-lead-handle
+**/alembic/**                   @cto-handle @deputy-lead-handle
+
+# 4. API & Event Contracts
+**/contracts/**                 @cto-handle @deputy-lead-handle
+**/*.openapi.yaml               @cto-handle @deputy-lead-handle
+**/*.openapi.json               @cto-handle @deputy-lead-handle
+**/*.schema.json                @cto-handle @deputy-lead-handle

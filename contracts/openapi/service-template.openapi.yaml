@@ -1,0 +1,165 @@
+openapi: 3.1.0
+info:
+  title: Microservice Canonical API Contract Template
+  version: 1.0.0
+  description: >
+    Stage 2 Contract-First template. All microservices MUST define new or modified
+    endpoints here before implementation PRs are opened in service, Angular, or Mobile repos.
+servers:
+  - url: https://api.internal.example.com/v1
+    description: Production Internal Gateway
+
+paths:
+  /resources:
+    get:
+      operationId: listResources
+      summary: List resources with cursor pagination
+      tags:
+        - Resources
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResourceList"
+        "400":
+          $ref: "#/components/responses/ProblemDetailsError"
+        "401":
+          $ref: "#/components/responses/ProblemDetailsError"
+        "500":
+          $ref: "#/components/responses/ProblemDetailsError"
+
+    post:
+      operationId: createResource
+      summary: Create a new resource
+      tags:
+        - Resources
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceRequest"
+      responses:
+        "201":
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceResponse"
+        "400":
+          $ref: "#/components/responses/ProblemDetailsError"
+        "409":
+          $ref: "#/components/responses/ProblemDetailsError"
+
+components:
+  responses:
+    ProblemDetailsError:
+      description: RFC 7807 Problem Details Standard Error Envelope
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+  schemas:
+    CreateResourceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - category
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        category:
+          type: string
+          enum: [STANDARD, PRIORITY, ARCHIVED]
+
+    ResourceResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - category
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+          enum: [STANDARD, PRIORITY, ARCHIVED]
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginatedResourceList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - nextCursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceResponse"
+        nextCursor:
+          type: ["string", "null"]
+
+    ProblemDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - traceId
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI reference that identifies the problem type
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence
+        instance:
+          type: string
+          format: uri
+        traceId:
+          type: string
+          description: Distributed correlation/trace ID for debugging across microservices
