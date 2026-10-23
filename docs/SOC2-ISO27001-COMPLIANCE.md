@@ -48,3 +48,35 @@ Since you already have services shipped to production, **do not** attempt to wri
 3. **Transitioning for Your Official SOC 2 / ISO 27001 Audit:**
    - Using a personal repo with collaborators is great for your **Rollout Pilot (Weeks 1–4)**.
    - Before your formal SOC 2 / ISO 27001 audit window begins, use GitHub's **Settings → Transfer ownership** to move the repo into a **GitHub Organization** (even the Free tier works). Auditors require company-owned repositories under an Organization so access can be centrally revoked when an employee offboards (SOC 2 CC6.2 / ISO 27001 A.5.18).
+
+
+---
+
+## 4. Automated Audit Evidence Collection (Zero Manual Screenshots)
+
+Instead of manually taking screenshots of GitHub PRs and branch protection settings when external auditors request a sample of production changes, **`Plant-A-Virtual-CTO`** provides automated, cryptographically hashed evidence export:
+
+1. **On-Demand CLI Exporter ([`scripts/export-audit-evidence.ps1`](../scripts/export-audit-evidence.ps1) & [`scripts/export-audit-evidence.sh`](../scripts/export-audit-evidence.sh)):**
+   ```powershell
+   .\scripts\export-audit-evidence.ps1 -Repos @("your-org/service-a", "your-org/service-b", "your-org/Plant-A-Virtual-CTO")
+   ```
+   Exports a timestamped bundle (`compliance/evidence-bundles/audit-YYYY-MM-DD/`) containing:
+   - `*-production-prs.json`: Full population of merged `main` PRs with author, reviewer approvals, timestamps, and commit SHAs.
+   - `EXCEPTIONS-AND-HOTFIX-REGISTER.md`: Dedicated audit table of every `[CTO-OVERRIDE]` and `[HOTFIX-TRACK]` invocation.
+   - `*-branch-protection.json`: Live GitHub API dump proving branch protection and required checks are active.
+   - `*-access-roster.json`: Live GitHub Collaborator & permission dump for Quarterly Access Reviews.
+   - `SHA256SUMS.txt`: Tamper-evident SHA-256 hash manifest of all exported files.
+2. **Monthly Scheduled GitHub Action ([`.github/workflows/monthly-audit-evidence.yml`](../.github/workflows/monthly-audit-evidence.yml)):**
+   - Runs automatically at `02:00 UTC` on the 1st of every month and archives a 365-day immutable artifact inside GitHub Actions.
+
+---
+
+## 5. Beyond GitHub: The "Other 80%" of SOC 2 & ISO/IEC 27001:2022 (`compliance/`)
+
+To ensure our startup is prepared for the **entire** SOC 2 and ISO 27001 audit (not just GitHub SDLC controls), the [`compliance/`](../compliance/) directory provides ready-to-use operational registers:
+
+| Compliance Artifact | Controls Covered | What It Solves |
+| :--- | :--- | :--- |
+| **[`compliance/AI-AND-VENDOR-RISK-REGISTER.md`](../compliance/AI-AND-VENDOR-RISK-REGISTER.md)** | SOC 2 CC9.2 / ISO 27001 A.5.19–A.5.23 | Documents mandatory **Zero-Training / Privacy Mode** settings for GitHub Copilot, OpenAI Codex, Antigravity, Cursor, and Claude Code, plus `.aiignore` rules and third-party vendor risk tracking. |
+| **[`compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md`](../compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md)** | SOC 2 CC6.1–CC6.7, A1.2 / ISO 27001 A.5.15–A.5.18, A.6.5, A.8.1, A.8.13, A.8.24 | Covers Cloud IAM & MFA, AES-256 DB Encryption, Quarterly DB Backup Restore testing, Developer Laptop BitLocker/FileVault encryption, 24-hour HR Offboarding SLA, and the Quarterly Access Review sign-off table. |
+| **[`compliance/INCIDENT-RESPONSE-PLAYBOOK.md`](../compliance/INCIDENT-RESPONSE-PLAYBOOK.md)** | SOC 2 CC7.3–CC7.4 / ISO 27001 A.5.24–A.5.28 | Defines `SEV-1/2/3` SLAs, the 30-minute leaked-secret rotation procedure, emergency `[HOTFIX-TRACK]` containment, and the annual Tabletop Exercise log. |

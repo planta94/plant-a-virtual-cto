@@ -1,0 +1,75 @@
+name: "Hub Self-Governance CI (SOC 2 & ISO 27001 Verification for Plant-A-Virtual-CTO)"
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  hub_security_and_integrity_gate:
+    name: "Verify Hub Secrets, PR Attestation, Scripts & YAML/JSON Integrity"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Gate 1: Secret Scanning on Hub Repository (Gitleaks)"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Gate 2: Verify PR Governance & SOC 2 / ISO 27001 Sign-Off"
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          echo "🔍 Verifying PR Attestation Checkboxes..."
+          if ! echo "${PR_BODY}" | grep -Eq '\[[xX]\]'; then
+            echo "::error::Pull Request must check at least one contribution type and the verification sign-off in .github/PULL_REQUEST_TEMPLATE.md."
+            exit 1
+          fi
+
+          # Warn and flag if critical CI workflows or CODEOWNERS are modified
+          CRITICAL_TOUCHED=$(git diff --name-only origin/${BASE_REF}...HEAD -- '.github/workflows/**' '.github/CODEOWNERS' 'microservice-template/**' 'SECURITY.md' || true)
+          if [ -n "${CRITICAL_TOUCHED}" ]; then
+            echo "⚠️ [SOC 2 CC8.1 / ISO 27001 A.8.32 AUDIT LOG] Critical Hub Governance files modified:"
+            echo "${CRITICAL_TOUCHED}"
+            echo "Mandatory @cto-handle or @deputy-lead-handle CODEOWNERS approval required before merge."
+          fi
+
+      - name: "Gate 3: Validate Bash Scripts, YAML Workflows, JSON Schemas & UTF-8 Encoding"
+        run: |
+          echo "1. Validating Bash script syntax (bash -n)..."
+          for s in scripts/*.sh; do
+            bash -n "$s"
+            echo "   ✅ $s syntax valid"
+          done
+
+          echo "2. Validating JSON Event Schemas (jq)..."
+          for j in contracts/events/*.json; do
+            [ -e "$j" ] || continue
+            jq empty "$j"
+            echo "   ✅ $j valid JSON"
+          done
+
+          echo "3. Validating YAML files (workflows, OpenAPI, pre-commit)..."
+          python3 -c '
+          import yaml, glob, sys
+          files = glob.glob(".github/**/*.yml", recursive=True) + glob.glob("contracts/openapi/*.yaml") + [".pre-commit-config.yaml", "microservice-template/.pre-commit-config.yaml"]
+          for f in files:
+              with open(f, "r", encoding="utf-8") as fp:
+                  yaml.safe_load(fp)
+              print(f"   ✅ {f} valid YAML")
+          '
+
+          echo "4. Checking for accidental double-encoded UTF-8 mojibake..."
+          if grep -rnP "\xC3\xA2\xE2\x82\xAC|\xC3\xA2\xE2\x80\x9D" README.md AGENTS.md docs/ specs/ compliance/ 2>/dev/null; then
+            echo "::error::Detected double-encoded UTF-8 mojibake characters in markdown files!"
+            exit 1
+          fi
+          echo "   ✅ All Markdown files are clean UTF-8."

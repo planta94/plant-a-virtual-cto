@@ -1,0 +1,145 @@
+name: "Auto-Sync WIP Queue & Enforce 'Swap, Don't Stack' (Max 1 Active Spec/Dev)"
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened, assigned, unassigned, labeled, unlabeled]
+  pull_request:
+    types: [closed]
+    branches: [UAT, uat, main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: wip-queue-sync
+  cancel-in-progress: false
+
+jobs:
+  sync_wip_queue:
+    name: "Enforce 1-Spec-Per-Dev & Rebuild specs/WIP-QUEUE.md"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Plant-A-Virtual-CTO
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Auto-Transition Spec Status on PR Merge (UAT / MAIN)
+        if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          TEXT="$PR_TITLE $PR_BODY"
+          SPEC_ID=$(echo "$TEXT" | grep -oE 'SPEC-[0-9]+' | head -n 1 || true)
+          if [ -z "$SPEC_ID" ]; then
+            echo "No SPEC-XXX found in merged PR."
+            exit 0
+          fi
+          echo "Found $SPEC_ID in merged PR to $BASE_REF"
+          ISSUE_NUM=$(gh issue list --search "$SPEC_ID in:title" --state all --json number --jq '.[0].number' || true)
+          if [ -n "$ISSUE_NUM" ] && [ "$ISSUE_NUM" != "null" ]; then
+            if [[ "$BASE_REF" =~ ^(main|master)$ ]]; then
+              gh issue edit "$ISSUE_NUM" --remove-label "status:active,status:uat,status:paused" --add-label "status:done" || true
+              gh issue close "$ISSUE_NUM" --comment "✅ Auto-closed by **Plant-A-Virtual-CTO**: PR merged to \`$BASE_REF\`." || true
+            elif [[ "$BASE_REF" =~ ^(UAT|uat)$ ]]; then
+              gh issue edit "$ISSUE_NUM" --remove-label "status:active" --add-label "status:uat" || true
+              gh issue comment "$ISSUE_NUM" --body "🚀 **Stage 4 Update:** PR merged to \`$BASE_REF\`. Spec status automatically updated to \`status:uat\`." || true
+            fi
+          fi
+
+      - name: Enforce "Swap, Don't Stack" (Max 1 Active Spec per Developer)
+        if: github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'labeled' || github.event.action == 'assigned')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          # Check if current issue has status:active and an assignee
+          ISSUE_JSON=$(gh issue view "$CURRENT_ISSUE" --json assignees,labels,title)
+          IS_ACTIVE=$(echo "$ISSUE_JSON" | jq '[.labels[].name] | index("status:active") != null')
+          ASSIGNEE=$(echo "$ISSUE_JSON" | jq -r '.assignees[0].login // empty')
+
+          if [ "$IS_ACTIVE" = "true" ] && [ -n "$ASSIGNEE" ]; then
+            echo "Checking other active specs for @$ASSIGNEE..."
+            OTHER_ACTIVES=$(gh issue list --assignee "$ASSIGNEE" --label "status:active" --state open --json number,title | jq -c ".[] | select(.number != $CURRENT_ISSUE)")
+            for row in $OTHER_ACTIVES; do
+              OLD_NUM=$(echo "$row" | jq -r '.number')
+              OLD_TITLE=$(echo "$row" | jq -r '.title')
+              echo "Swapping out older active spec #$OLD_NUM ($OLD_TITLE) for @$ASSIGNEE"
+              gh issue edit "$OLD_NUM" --remove-label "status:active" --add-label "status:paused"
+              gh issue comment "$OLD_NUM" --body "⏸️ **Auto-Paused by Plant-A-Virtual-CTO ('Swap, Don't Stack' Rule):** @$ASSIGNEE started a newer active Spec (#$CURRENT_ISSUE). Because maximum WIP is **1 Active Spec per developer**, this Spec has been automatically moved to \`status:paused\`."
+            done
+          fi
+
+      - name: Regenerate specs/WIP-QUEUE.md from Live GitHub Issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          ISSUES_JSON=$(gh issue list --label "spec" --state all --limit 100 --json number,title,state,assignees,labels,updatedAt,url)
+
+          cat << 'EOF' > specs/WIP-QUEUE.md
+          # Live Engineering WIP Queue ("Swap, Don't Stack")
+
+          > **⚠️ AUTO-GENERATED FILE — DO NOT EDIT MANUALLY IN PR BRANCHES**
+          > This file is automatically synchronized by [`.github/workflows/wip-queue-sync.yml`](../.github/workflows/wip-queue-sync.yml) from **GitHub Issues** whenever a Spec Issue is opened, swapped, or merged to `UAT` / `MAIN`.
+          > - **Hard Rule:** Maximum **1 `status:active` Spec per developer** at any time.
+          > - **To Start or Swap a Spec:** Open a GitHub Issue using the **1-Page Feature Spec** or **Boss Ad-Hoc Idea Triage** form. If you assign yourself a new `status:active` Spec, the bot automatically pauses your previous Spec (`status:paused`).
+
+          EOF
+
+          echo "_Last Auto-Synced: **${TIMESTAMP}**_" >> specs/WIP-QUEUE.md
+          echo "" >> specs/WIP-QUEUE.md
+
+          echo "## 🟢 Active WIP (Max 1 Active Spec per Developer)" >> specs/WIP-QUEUE.md
+          echo "| Spec / Issue | Developer | Current Stage | Last Updated |" >> specs/WIP-QUEUE.md
+          echo "| :--- | :--- | :--- | :--- |" >> specs/WIP-QUEUE.md
+
+          ACTIVE_ROWS=$(echo "$ISSUES_JSON" | jq -r '.[] | select(.state=="OPEN" and ([.labels[].name] | index("status:active") != null or index("status:uat") != null)) | "| [#" + (.number|tostring) + " " + (.title | gsub("\\|"; "-")) + "](" + .url + ") | @" + (.assignees[0].login // "unassigned") + " | `" + (if ([.labels[].name] | index("status:uat") != null) then "IN-UAT" else "ACTIVE-DEV" end) + "` | " + (.updatedAt[0:10]) + " |"')
+          if [ -z "$ACTIVE_ROWS" ]; then
+            echo "| _No active specs via GitHub Issues yet_ | — | — | — |" >> specs/WIP-QUEUE.md
+          else
+            echo "$ACTIVE_ROWS" >> specs/WIP-QUEUE.md
+          fi
+
+          echo "" >> specs/WIP-QUEUE.md
+          echo "## ⏸️ Paused / Swapped Specs (On Hold due to Boss Triage Swap)" >> specs/WIP-QUEUE.md
+          echo "| Spec / Issue | Developer | Status | Last Updated |" >> specs/WIP-QUEUE.md
+          echo "| :--- | :--- | :--- | :--- |" >> specs/WIP-QUEUE.md
+
+          PAUSED_ROWS=$(echo "$ISSUES_JSON" | jq -r '.[] | select(.state=="OPEN" and ([.labels[].name] | index("status:paused") != null or index("status:triage") != null)) | "| [#" + (.number|tostring) + " " + (.title | gsub("\\|"; "-")) + "](" + .url + ") | @" + (.assignees[0].login // "unassigned") + " | `PAUSED / TRIAGE` | " + (.updatedAt[0:10]) + " |"')
+          if [ -z "$PAUSED_ROWS" ]; then
+            echo "| _No paused specs_ | — | — | — |" >> specs/WIP-QUEUE.md
+          else
+            echo "$PAUSED_ROWS" >> specs/WIP-QUEUE.md
+          fi
+
+          echo "" >> specs/WIP-QUEUE.md
+          echo "## ✅ Recently Shipped to MAIN (Last 10 Completed Specs)" >> specs/WIP-QUEUE.md
+          echo "| Spec / Issue | Developer | Status | Completed Date |" >> specs/WIP-QUEUE.md
+          echo "| :--- | :--- | :--- | :--- |" >> specs/WIP-QUEUE.md
+
+          DONE_ROWS=$(echo "$ISSUES_JSON" | jq -r '[.[] | select(.state=="CLOSED")] | .[0:10] | .[] | "| [#" + (.number|tostring) + " " + (.title | gsub("\\|"; "-")) + "](" + .url + ") | @" + (.assignees[0].login // "unassigned") + " | `SHIPPED (MAIN)` | " + (.updatedAt[0:10]) + " |"')
+          if [ -z "$DONE_ROWS" ]; then
+            echo "| _No closed specs yet_ | — | — | — |" >> specs/WIP-QUEUE.md
+          else
+            echo "$DONE_ROWS" >> specs/WIP-QUEUE.md
+          fi
+
+      - name: Commit Updated specs/WIP-QUEUE.md (Zero Merge Conflicts)
+        run: |
+          git config user.name "plant-a-virtual-cto-bot"
+          git config user.email "bot@plant-a-virtual-cto.local"
+          if ! git diff --quiet specs/WIP-QUEUE.md; then
+            git add specs/WIP-QUEUE.md
+            git commit -m "chore(wip): auto-sync specs/WIP-QUEUE.md from live GitHub Issues [skip ci]"
+            git push origin main
+          else
+            echo "specs/WIP-QUEUE.md is already up to date."
+          fi

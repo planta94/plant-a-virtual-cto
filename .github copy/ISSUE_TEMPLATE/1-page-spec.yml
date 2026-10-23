@@ -1,0 +1,74 @@
+name: "📋 1-Page Feature Spec (SPEC-XXX)"
+description: "Create a mandatory 1-Page Spec before writing feature code (> 50 LOC). Auto-syncs to WIP-QUEUE.md."
+title: "[SPEC-XXX] <Feature Title>"
+labels: ["spec", "status:active"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Plant-A-Virtual-CTO: Stage 1 Feature Specification
+        > **Rule:** Maximum **1 Active Spec per developer** (`status:active`). When you submit or close this issue, GitHub Actions automatically rebuilds `specs/WIP-QUEUE.md` (zero manual markdown merge conflicts).
+
+  - type: input
+    id: spec_id
+    attributes:
+      label: "Spec ID"
+      description: "Unique identifier (e.g., SPEC-016)"
+      placeholder: "SPEC-016"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_services
+    attributes:
+      label: "Affected Repositories / Stack Layers"
+      description: "Select all repositories touched by this feature"
+      multiple: true
+      options:
+        - "service-a (Node.js / TypeScript)"
+        - "service-b (Python / FastAPI)"
+        - "web-portal (Angular)"
+        - "mobile-app (Flutter / React Native)"
+        - "contracts/ (OpenAPI / Event Schema Change)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_goal
+    attributes:
+      label: "1. Problem & Business Goal (Max 3 sentences)"
+      description: "What user or business problem does this solve, and why now?"
+      placeholder: "Users currently cannot export monthly invoices..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: "2. Explicit Non-Goals (Out of Scope)"
+      description: "What are we strictly NOT building in this iteration?"
+      placeholder: "- No PDF custom branding in v1\n- No scheduled email delivery"
+    validations:
+      required: true
+
+  - type: textarea
+    id: contract_impact
+    attributes:
+      label: "3. API / Event Contract & Database Impact"
+      description: "List new/modified OpenAPI endpoints, async events, or DB migrations."
+      placeholder: "- POST /v1/invoices/export\n- DB: Add export_jobs table (additive migration)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_matrix
+    attributes:
+      label: "4. 5-Layer Acceptance & Security Test Matrix"
+      description: "Your AI coding tool will generate unit, integration, and 403 IDOR tests directly from these bullets."
+      value: |
+        - [ ] Happy Path (200/201): 
+        - [ ] Validation Error (400/422): 
+        - [ ] Auth / Cross-Tenant IDOR Check (401/403): User from Tenant A cannot access Tenant B resource
+        - [ ] Edge / Failure Case (409/429/500): 
+    validations:
+      required: true

@@ -1,0 +1,40 @@
+name: "Monthly SOC 2 & ISO 27001 Evidence Snapshot (Automated Audit Trail)"
+
+on:
+  schedule:
+    # Runs at 02:00 UTC on the 1st of every month
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: "Space-separated list of owner/repo to export (leave blank for current repo)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  archive_audit_evidence:
+    name: "Export Tamper-Evident Audit Evidence Bundle"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Plant-A-Virtual-CTO
+        uses: actions/checkout@v4
+
+      - name: Run Evidence Exporter Script
+        env:
+          GH_TOKEN: ${{ secrets.ORG_SYNC_PAT || secrets.GITHUB_TOKEN }}
+          TARGET_REPOS: ${{ github.event.inputs.repos || github.repository }}
+        run: |
+          chmod +x ./scripts/export-audit-evidence.sh
+          ./scripts/export-audit-evidence.sh "$TARGET_REPOS" 200
+
+      - name: Upload Immutable Audit Evidence Artifact (365-Day Retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: soc2-iso27001-evidence-${{ github.run_number }}
+          path: compliance/evidence-bundles/
+          retention-days: 365

@@ -380,3 +380,63 @@ flowchart LR
 | **ISO 27001 A.8.29**<br>**SOC 2 CC7.1** | Security & Functional Testing in Development | **CI Gate 1** blocks code PRs missing test files. **CI Gate 2** runs **Gitleaks** (secrets), **Semgrep** (OWASP Top 10 SAST), and **CVE audits**. **CI Gate 3** runs unit + real-DB integration tests (`>= 85%` diff coverage). |
 | **ISO 27001 A.5.12**<br>**SOC 2 Confidentiality** | AI Data Privacy & Protection of PII/Secrets | CI Gate 1 enforces mandatory PR checkbox attestation: *"`[x]` No production secrets, customer PII, or proprietary credentials were shared with external AI tools or committed."* |
 
+
+
+---
+
+## 8. Enterprise Hardening: Zero-Conflict WIP Sync, Contract Safety & Full Audit Pack
+
+To ensure **`Plant-A-Virtual-CTO`** rivals commercial governance platforms without recurring SaaS costs, the repository includes three automated hardening subsystems:
+
+#### Diagram 7: Enterprise Hardening Architecture (WIP Bot, Contract Lock & Audit Exporter)
+
+```mermaid
+flowchart TB
+    subgraph WIP["1. Zero-Conflict WIP Queue & 'Swap, Don't Stack' Bot"]
+        ISSUE["GitHub Issue Forms<br/>• 1-page-spec.yml (SPEC-XXX)<br/>• boss-triage-swap.yml"] --> WIPBOT["wip-queue-sync.yml<br/>• Enforces Max 1 Active Spec/Dev<br/>• Auto-pauses older Spec on Swap<br/>• Auto-closes on UAT -> MAIN merge"]
+        WIPBOT --> WIPMD["Auto-Commits specs/WIP-QUEUE.md<br/>(Zero Git Merge Conflicts)"]
+    end
+
+    subgraph CONTRACT["2. Cross-Repo Contract Safety & SHA-256 Lock"]
+        OAS["PR to contracts/openapi/ or events/"] --> OASDIFF["contract-breaking-change-gate.yml<br/>• Runs oasdiff breaking vs main<br/>• Blocks deleted fields/endpoints"]
+        OASDIFF --> SDKGEN["generate-sdk.ps1 / .sh<br/>• Pulls Local or Remote Hub<br/>• Stamps CONTRACT.lock (SHA-256)"]
+        SDKGEN --> GATE1LOCK["Microservice CI Gate 1<br/>• Verifies CONTRACT.lock SHA-256<br/>• Blocks hand-edited DTOs"]
+    end
+
+    subgraph AUDIT["3. Automated SOC 2 & ISO 27001 Evidence Pack (100% Coverage)"]
+        CRON["monthly-audit-evidence.yml<br/>+ export-audit-evidence.ps1/.sh"] --> BUNDLE["Tamper-Evident Audit Bundle<br/>• production-prs.json<br/>• EXCEPTIONS-AND-HOTFIX-REGISTER.md<br/>• branch-protection & access-roster<br/>• SHA256SUMS.txt (365-Day Retention)"]
+        REGISTERS["compliance/ Registers ('The Other 80%')<br/>• AI-AND-VENDOR-RISK-REGISTER.md<br/>• QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md<br/>• INCIDENT-RESPONSE-PLAYBOOK.md"] --> BUNDLE
+    end
+```
+
+### 8.1 Zero-Conflict WIP Queue & Automatic "Swap, Don't Stack" Enforcement
+Manual edits to a shared Markdown table (`specs/WIP-QUEUE.md`) on feature branches cause Git merge conflicts and go stale when developers forget to update them.
+* **GitHub Issue Forms ([`.github/ISSUE_TEMPLATE/1-page-spec.yml`](../.github/ISSUE_TEMPLATE/1-page-spec.yml) & [`boss-triage-swap.yml`](../.github/ISSUE_TEMPLATE/boss-triage-swap.yml)):** Developers create or swap Specs via structured GitHub Issues (or via CLI: `gh issue create --template "1-page-spec.yml" --label "spec,status:active" --assignee "@me"`).
+* **Automated Bot Enforcement ([`.github/workflows/wip-queue-sync.yml`](../.github/workflows/wip-queue-sync.yml)):**
+  1. **Enforces Max 1 Active Spec/Dev:** When a developer assigns themselves a new `status:active` Issue, the GitHub Action automatically transitions any older `status:active` Issue owned by that developer to `status:paused` and comments on the thread.
+  2. **Auto-Transitions on PR Merge:** Merging a PR referencing `SPEC-XXX` into `UAT` automatically flips the Issue to `status:uat`; merging into `MAIN` automatically closes the Issue as `status:done`.
+  3. **Rebuilds `specs/WIP-QUEUE.md` on `main`:** Only the bot commits to `specs/WIP-QUEUE.md`, guaranteeing zero merge conflicts and an always-accurate file for local AI tools.
+
+### 8.2 Cross-Repo Contract Safety (`oasdiff` Breaking Gate + `CONTRACT.lock`)
+* **Automated Breaking-Change Blocker ([`.github/workflows/contract-breaking-change-gate.yml`](../.github/workflows/contract-breaking-change-gate.yml)):**
+  * Runs **`oasdiff breaking`** on every PR touching `contracts/openapi/*.yaml` and checks JSON Schema property compatibility on `contracts/events/*.json`.
+  * Deleting an endpoint, renaming a response field, or adding a required request parameter without bumping `/v2` **fails CI immediately** (unless overridden via `[CTO-OVERRIDE: reason]`), protecting live Mobile and Angular clients.
+* **Remote Hub Fetch & Cryptographic `CONTRACT.lock` ([`scripts/generate-sdk.ps1`](../scripts/generate-sdk.ps1) & [`scripts/generate-sdk.sh`](../scripts/generate-sdk.sh)):**
+  * Developers can generate SDKs either from a local checkout or directly from the remote GitHub repository (`-RemoteHubUrl`), removing fragile relative-path assumptions.
+  * Stamps a `CONTRACT.lock` file containing the SHA-256 hash of all generated DTOs (`sdk_output_sha256`).
+  * **Gate 1 CI (`reusable-sdge-gates.yml`)** verifies `CONTRACT.lock` on every PR—blocking any developer or AI tool that manually edits generated files in `src/generated/contracts/`.
+
+### 8.3 Automated SOC 2 / ISO 27001 Evidence Exporter & "The Other 80%" Compliance Pack
+* **1-Click & Monthly Tamper-Evident Evidence Bundle ([`scripts/export-audit-evidence.ps1`](../scripts/export-audit-evidence.ps1) & [`.github/workflows/monthly-audit-evidence.yml`](../.github/workflows/monthly-audit-evidence.yml)):**
+  * Queries GitHub's API across all repositories and exports `*-production-prs.json`, `EXCEPTIONS-AND-HOTFIX-REGISTER.md` (every `[CTO-OVERRIDE]` and `[HOTFIX-TRACK]`), `*-branch-protection.json`, `*-access-roster.json`, and a cryptographic `SHA256SUMS.txt` manifest.
+* **Beyond-GitHub Audit Registers ([`compliance/`](../compliance/)):**
+  * [`compliance/AI-AND-VENDOR-RISK-REGISTER.md`](../compliance/AI-AND-VENDOR-RISK-REGISTER.md): Mandatory **Zero-Training / Privacy Mode** settings across GitHub Copilot, OpenAI Codex, Antigravity, Cursor, and Claude Code.
+  * [`compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md`](../compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md): Cloud IAM MFA, AES-256 DB encryption, quarterly DB backup restore log, developer laptop BitLocker/FileVault encryption, and 24-hour offboarding SLA.
+  * [`compliance/INCIDENT-RESPONSE-PLAYBOOK.md`](../compliance/INCIDENT-RESPONSE-PLAYBOOK.md): `SEV-1/2/3` SLAs, 30-minute leaked-secret rotation procedure, and annual Tabletop Exercise log.
+
+
+### 8.4 Hub Self-Governance (Tier-0 Protection for `Plant-A-Virtual-CTO` Itself)
+Because `Plant-A-Virtual-CTO` broadcasts CI workflows (`reusable-sdge-gates.yml`), security rules (`AGENTS.md`), and contracts to all production repositories, the hub repository itself is protected as **Tier-0 Critical Infrastructure**:
+* **Hub-Level [`.github/CODEOWNERS`](../.github/CODEOWNERS):** Locks `/.github/workflows/`, `/AGENTS.md`, `/scripts/`, `/contracts/`, `/compliance/`, and `/microservice-template/` to `@cto-handle @deputy-lead-handle` so no developer can weaken a CI gate or modify a contract without CTO/Deputy approval.
+* **Self-Governance CI ([`.github/workflows/hub-self-governance-ci.yml`](../.github/workflows/hub-self-governance-ci.yml)):** Runs on every Pull Request to `Plant-A-Virtual-CTO`, enforcing **Gitleaks** secret scanning, PR template sign-off attestation, Bash/YAML/JSON syntax verification (`bash -n`, `jq`, `pyyaml`), and clean UTF-8 encoding checks.
+* **Supply-Chain Pinned Tooling & [`SECURITY.md`](../SECURITY.md):** All CI binaries (such as `oasdiff v1.11.7` in `contract-breaking-change-gate.yml`) are version-pinned rather than piped from mutable branches, and [`SECURITY.md`](../SECURITY.md) enforces a 90-day rotation policy on fine-grained `ORG_SYNC_PAT` tokens.

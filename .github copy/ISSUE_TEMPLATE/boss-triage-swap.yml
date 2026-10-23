@@ -1,0 +1,57 @@
+name: "⚡ Boss Ad-Hoc Idea Triage (Swap, Don't Stack)"
+description: "Convert an on-the-fly founder/boss request into a 30-minute trade-off card and automatically swap WIP."
+title: "[BOSS-TRIAGE] <Idea Title>"
+labels: ["spec", "boss-triage", "status:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### ⚡ 30-Minute Executive Triage ("Swap, Don't Stack")
+        > **Rule:** Developers have a hard limit of **1 Active Spec** at a time. To start this ad-hoc request immediately, select which currently active Spec is being paused (`status:paused`). GitHub Actions will automatically update `specs/WIP-QUEUE.md`.
+
+  - type: input
+    id: new_spec_id
+    attributes:
+      label: "New Spec ID"
+      placeholder: "SPEC-017"
+    validations:
+      required: true
+
+  - type: input
+    id: paused_spec_id
+    attributes:
+      label: "Spec ID Being Paused (Swap Target)"
+      description: "Which currently active Spec is being paused to make room for this request? (Write 'NONE' if queue is empty)"
+      placeholder: "SPEC-015"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tshirt_size
+    attributes:
+      label: "AI-Estimated T-Shirt Effort"
+      options:
+        - "S (1-2 Days | < 400 LOC)"
+        - "M (3-5 Days | 2-3 Stacked PRs)"
+        - "L (1-2 Weeks | Requires Contract + Multi-Service Changes)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope_summary
+    attributes:
+      label: "Core Scope & Affected Microservices"
+      placeholder: "1. Add webhook endpoint in service-a\n2. Update Angular dashboard..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: executive_decision
+    attributes:
+      label: "Founder / CTO Decision"
+      options:
+        - "Option A: SWAP NOW (Pause current Spec & start this immediately)"
+        - "Option B: QUEUE NEXT (Finish current Spec first, start this next)"
+        - "Option C: PARK IN BACKLOG (Do not interrupt current work)"
+    validations:
+      required: true

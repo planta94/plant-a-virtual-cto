@@ -1,125 +1,370 @@
-# Engineering Standards, Security, Testing & AI Context (`AGENTS.md`)
+# `Plant-A-Virtual-CTO` — Master Technical Handover & AI Engineering Constitution (`AGENTS.md`)
 
-> **SINGLE SOURCE OF TRUTH FOR ALL AI AGENTS & DEVELOPERS**
-> Every AI coding assistant (Antigravity, GitHub Copilot, OpenAI Codex, Cursor, Claude Code) and every human engineer MUST follow the rules in this file.
-> **Compliance Mandate:** This repository and all connected production microservices operate under **SOC 2 (CC6, CC7, CC8)** and **ISO/IEC 27001:2022 (Annex A.8.25–A.8.32)** Secure SDLC controls.
-
----
-
-## 1. The Core Lifecycle Law (3-Track Spec-Driven Engineering)
-
-We do not use Scrum, story points, or daily standups. We use **Spec-Driven, Gate-Enforced Engineering (SDGE)** with full auditability for SOC 2 and ISO 27001.
-
-### 1.1 The Three-Track Rule (Every PR Must Declare One Track)
-
-1. **Fast Track (`[FAST-TRACK]` — Small Maintenance & Bugfixes):**
-   - **Criteria:** `< 100 lines of code (LOC)` changed AND **zero changes** to:
-     - Dependencies (`package.json`, `pyproject.toml`, `requirements.txt`, `pubspec.yaml`)
-     - Database schemas / migrations
-     - Cross-service API contracts (OpenAPI) or Event schemas (JSON Schema)
-     - Authentication, authorization, encryption, or security middleware
-   - **Audit & Test Requirement:** Must reference an Issue/Bug ID (e.g., `ISSUE-123`), include a regression unit test proving the bug is fixed, and pass automated CI + 1 human peer review.
-
-2. **Spec Track (`SPEC-XXX` — Standard Feature & Architecture Track):**
-   - **Criteria:** Any change `>= 100 LOC`, any new feature, or any change touching dependencies, DB schemas, auth/security, or API/Event contracts.
-   - **Stage 1 — 1-Page Spec (`SPEC-XXX`):** Draft and merge a 1-page spec in `specs/` (including Security Impact & Mandatory Test Matrix) before writing implementation code.
-   - **Stage 2 — Contract Lock:** Merge OpenAPI 3.1 (`contracts/openapi/`) or JSON Schema event changes (`contracts/events/`) first.
-   - **Stage 3 — Bounded Implementation + Full Testing:** Write code + tests in stacked PRs. **Hard limit: Max 400 LOC per PR** (excluding lockfiles and generated SDKs).
-   - **Stage 4 — Automated CI & Peer Review:** All SAST, secret scan, contract diff, test coverage, and quality gates must pass + human peer approval.
-
-3. **Emergency Hotfix Track (`[HOTFIX-TRACK]` — SOC 2 / ISO 27001 Emergency Change Control):**
-   - **Criteria:** Critical production outage (SEV-1/SEV-2) or active security vulnerability patch requiring immediate remediation.
-   - **Process:** May bypass pre-implementation Spec creation to restore production, **provided**:
-     - Diff is strictly limited to fixing the incident (`< 200 LOC`).
-     - All automated security/secret gates pass.
-     - **Mandatory Post-Condition:** A retroactive `SPEC-HOTFIX-XXX` (Root Cause + Permanent Regression Test) must be merged within **24 business hours** (ISO 27001 A.8.32 Emergency Change Control).
+> **PURPOSE OF THIS DOCUMENT**
+> This file serves two simultaneous roles:
+> 1. **Complete Technical Handover Manual** for the CTO, Deputy Tech Leads, Software Engineers, and External SOC 2 / ISO 27001 Auditors.
+> 2. **Single Source of Truth ("Virtual CTO Brain")** automatically loaded by every AI coding assistant across our repositories (**GitHub Copilot**, **OpenAI Codex**, **Google Antigravity**, **Cursor**, and **Claude Code**).
+>
+> **COMPLIANCE MANDATE:** All repositories governed by `Plant-A-Virtual-CTO` operate under **SOC 2 Trust Services Criteria (CC6, CC7, CC8, Confidentiality)** and **ISO/IEC 27001:2022 (Annex A.5.12, A.5.15–A.5.28, A.8.1–A.8.32)** Secure SDLC controls.
 
 ---
 
-## 2. Brownfield Production Rules ("Touch It, Standardize It")
+## Table of Contents
+1. [System Architecture & Multi-Repo Topology](#1-system-architecture--multi-repo-topology)
+2. [Repository Directory & File Handover Map](#2-repository-directory--file-handover-map)
+3. [Branching, Release Promotion (`feature/* → UAT → MAIN`) & Override Governance](#3-branching-release-promotion-feature--uat--main--override-governance)
+4. [The 3-Track Development Lifecycle & Zero-Conflict WIP Queue](#4-the-3-track-development-lifecycle--zero-conflict-wip-queue)
+5. [Cross-Repo Contract Safety (`oasdiff` + `CONTRACT.lock`)](#5-cross-repo-contract-safety-oasdiff--contractlock)
+6. [Brownfield ("Service A") vs. Greenfield ("Service B") Operational Runbook](#6-brownfield-service-a-vs-greenfield-service-b-operational-runbook)
+7. [Golden Stack Coding Standards & Explicitly Banned Patterns](#7-golden-stack-coding-standards--explicitly-banned-patterns)
+8. [Full-Fledged 5-Layer Testing Architecture (Anti-AI-Mock Rules)](#8-full-fledged-5-layer-testing-architecture-anti-ai-mock-rules)
+9. [SOC 2 & ISO 27001:2022 Security Rules, Audit Exporter & Compliance Pack](#9-soc-2--iso-270012022-security-rules-audit-exporter--compliance-pack)
+10. [CI/CD Pipeline Technical Reference (Gates 1–4)](#10-cicd-pipeline-technical-reference-gates-14)
+11. [Command-Line Operations & Maintenance Cheatsheet](#11-command-line-operations--maintenance-cheatsheet)
 
-Because we operate existing services in production, we apply a **Strangler / Boy Scout Rule** rather than halting feature work for full-repo rewrites:
+---
 
+## 1. System Architecture & Multi-Repo Topology
+
+We operate a **Polyrepo Microservice Architecture** without Agile ceremonies (no sprints, no daily standups, no story points). Alignment across independent developers and heterogeneous AI tools is enforced through **three deterministic locks**:
+
+1. **Lock #1 — Shared AI Context (`AGENTS.md` Sync):**
+   - `Plant-A-Virtual-CTO` acts as the central hub repository.
+   - Running `scripts/sync-microservice.ps1` (or `.sh`)—or merging to `main` via `.github/workflows/auto-broadcast-standards.yml`—automatically pushes this `AGENTS.md` file and tool-specific rule adapters into every downstream microservice repository.
+2. **Lock #2 — Contract-First Schema & SHA-256 Lock (`contracts/` + `CONTRACT.lock`):**
+   - All cross-service REST APIs (`contracts/openapi/*.yaml`) and async domain events (`contracts/events/*.schema.json`) are locked in `Plant-A-Virtual-CTO` before service implementation begins.
+   - Backward compatibility is enforced in CI by `oasdiff breaking` (`.github/workflows/contract-breaking-change-gate.yml`).
+   - Strict TypeScript, Python Pydantic v2, Angular, and Mobile DTOs are generated via `scripts/generate-sdk.ps1` / `.sh` and cryptographically locked via `CONTRACT.lock`.
+3. **Lock #3 — Automated 4-Gate CI/CD Verification (`reusable-sdge-gates.yml` / `ci-gates.yml`):**
+   - Every Pull Request in every microservice repository is verified by automated GitHub Actions gates checking PR size (`< 400 LOC`), Spec traceability (`SPEC-XXX`), `CONTRACT.lock` integrity, Gitleaks secret scanning, Semgrep OWASP SAST, CVE audits, and real-database 5-layer tests (`>= 85%` diff coverage).
+
+### 1.1 How AI Tools Load This File in Every Repository
+
+| AI Coding Assistant | File Path Loaded Automatically in Microservice Repo | How It Is Provisioned |
+| :--- | :--- | :--- |
+| **OpenAI Codex / Universal Agents** | `/AGENTS.md` | Copied directly from `Plant-A-Virtual-CTO/AGENTS.md` |
+| **GitHub Copilot** | `/.github/copilot-instructions.md` | Copied from `Plant-A-Virtual-CTO/ai-context/copilot-instructions.md` + references `/AGENTS.md` |
+| **Google Antigravity** | `/.gemini/rules/Plant-A-Virtual-CTO.md` | Copied from `Plant-A-Virtual-CTO/ai-context/antigravity-rules.md` + references `/AGENTS.md` |
+| **Cursor** | `/.cursorrules` | Generated by `sync-microservice` as a pointer + copy of `/AGENTS.md` |
+| **Claude Code** | `/CLAUDE.md` | Generated by `sync-microservice` as a pointer + copy of `/AGENTS.md` |
+
+---
+
+## 2. Repository Directory & File Handover Map
+
+### 2.1 Central Hub Repository (`Plant-A-Virtual-CTO/`)
+
+| Path | Technical Purpose & Ownership |
+| :--- | :--- |
+| `AGENTS.md` | **Master Technical Handover & AI Constitution.** Synced to all downstream repositories. |
+| `SECURITY.md` | **Tier-0 Hub Security Policy.** Defines branch protection rules, 90-day `ORG_SYNC_PAT` scoping, and vulnerability reporting (ISO 27001 A.5.1). |
+| `.pre-commit-config.yaml` & `.gitignore` | Local laptop Gitleaks secret check, YAML/JSON syntax validator, and secret/artifact ignore rules for the Hub repository itself. |
+| `CONTRIBUTING-GOLDEN-RULES.md` | Developer guide for proposing new Golden Rules, ADRs, AI Skills, and Golden Examples ("Compound AI Memory"). |
+| `golden-examples/` | Canonical, `< 100 LOC` reference implementations (Controllers, Services, Real-DB Tests) that AI tools copy as structural templates. |
+| `ai-context/copilot-instructions.md` | GitHub Copilot instruction file synced to `.github/copilot-instructions.md` in all microservice repos. |
+| `ai-context/antigravity-rules.md` | Google Antigravity workspace rule file synced to `.gemini/rules/Plant-A-Virtual-CTO.md` in all microservice repos. |
+| `ai-context/triage-boss-idea.skill.md` | AI prompt skill that turns an ad-hoc founder/boss request into a 30-minute trade-off card (`specs/TEMPLATE-BOSS-TRIAGE.md`) + `SPEC-XXX`. |
+| `ai-context/reverse-engineer-contract.skill.md` | AI prompt skill for Brownfield services ("Service A"): extracts an existing legacy endpoint's code into an OpenAPI 3.1 contract in 2 minutes. |
+| `ai-context/propose-golden-rule.skill.md` | AI prompt skill that converts a PR review lesson or AI mistake into a 2-line `AGENTS.md` rule and optional 20-line ADR. |
+| `specs/WIP-QUEUE.md` | **Auto-generated live WIP tracker.** Rebuilt automatically by `.github/workflows/wip-queue-sync.yml` from GitHub Issues. Never edit manually on feature branches. |
+| `specs/TEMPLATE-1PAGE-SPEC.md` | Markdown template for Stage 1 Feature Specifications (`SPEC-XXX`). |
+| `specs/TEMPLATE-BOSS-TRIAGE.md` | Markdown template for the 30-Minute Executive Triage & WIP Swap card. |
+| `contracts/openapi/*.yaml` | Canonical OpenAPI 3.1 specifications for all REST microservices. Protected by `contract-breaking-change-gate.yml`. |
+| `contracts/events/*.schema.json` | Canonical JSON Schema definitions for async message-bus events. Protected by `contract-breaking-change-gate.yml`. |
+| `compliance/AI-AND-VENDOR-RISK-REGISTER.md` | SOC 2 / ISO 27001 register documenting Zero-Training / Privacy Mode settings for all AI tools + third-party vendor risk tracking. |
+| `compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md` | Covers the non-GitHub 80% of SOC 2 / ISO 27001: Cloud IAM MFA, AES-256 DB encryption, quarterly DB backup restore tests, laptop BitLocker/FileVault, 24h offboarding SLA, and Quarterly Access Review log. |
+| `compliance/INCIDENT-RESPONSE-PLAYBOOK.md` | `SEV-1/2/3` incident response runbook, 30-minute leaked-secret rotation procedure, and annual Tabletop Exercise log. |
+| `docs/Plant-A-Virtual-CTO-Playbook.pdf` & `.md` | Comprehensive visual manual (with 7 architecture diagrams) for onboarding executives, leads, and developers. |
+| `docs/SERVICE-A-AND-B-PLAYBOOK.md` | Tactical step-by-step runbook for maintaining Brownfield (`Service A`) vs. building Greenfield (`Service B`). |
+| `docs/TESTING-STRATEGY-AND-STANDARDS.md` | Detailed reference for the 5-Layer Testing Trophy and Anti-Mock rules. |
+| `docs/SOC2-ISO27001-COMPLIANCE.md` | Control-by-control mapping between SDGE gates and SOC 2 / ISO 27001:2022 Annex A. |
+| `docs/adr/TEMPLATE-ADR.md` | 20-line Architecture Decision Record template required when introducing a new dependency (`package.json`, `pyproject.toml`, `pubspec.yaml`). |
+| `scripts/sync-microservice.ps1` & `.sh` | Injects `AGENTS.md`, AI rules, `.pre-commit-config.yaml`, `CODEOWNERS`, PR templates, and `.github/workflows/ci-gates.yml` into any target microservice repo. |
+| `scripts/generate-sdk.ps1` & `.sh` | Generates TypeScript/Pydantic/Angular/Mobile DTOs from `contracts/` (supports local checkout or `-RemoteHubUrl`) and stamps a SHA-256 `CONTRACT.lock`. |
+| `scripts/export-audit-evidence.ps1` & `.sh` | Queries GitHub API across repos to export tamper-evident SOC 2 / ISO 27001 evidence bundles (`SHA256SUMS.txt`). |
+| `.github/CODEOWNERS` | **Hub-Level `CODEOWNERS`.** Locks `.github/workflows/`, `AGENTS.md`, `scripts/`, `contracts/`, and `compliance/` to `@cto-handle @deputy-lead-handle`. |
+| `.github/ISSUE_TEMPLATE/*.yml` | Structured GitHub Issue Forms (`1-page-spec.yml` and `boss-triage-swap.yml`) that feed `wip-queue-sync.yml`. |
+| `.github/workflows/hub-self-governance-ci.yml` | **Hub Self-Governance CI.** Runs Gitleaks, PR attestation checks, Bash/YAML/JSON syntax checks, and UTF-8 validation on PRs to `Plant-A-Virtual-CTO` itself. |
+| `.github/workflows/reusable-sdge-gates.yml` | Central 4-Gate CI/CD workflow enforcing change control, DevSecOps, 5-Layer QA, and post-deploy Canary health checks. |
+| `.github/workflows/contract-breaking-change-gate.yml` | Runs pinned `oasdiff v1.11.7 breaking` and JSON Schema compatibility checks on every PR modifying `contracts/`. |
+| `.github/workflows/wip-queue-sync.yml` | Enforces `Max 1 Active Spec/Dev` ("Swap, Don't Stack"), auto-transitions Issue labels on `UAT`/`MAIN` merge, and auto-commits `specs/WIP-QUEUE.md`. |
+| `.github/workflows/monthly-audit-evidence.yml` | Runs on the 1st of every month to archive a 365-day SOC 2 / ISO 27001 evidence artifact. |
+| `.github/workflows/auto-broadcast-standards.yml` | Pushes updated rules from `Plant-A-Virtual-CTO` to downstream microservice repos whenever `main` is updated. |
+
+### 2.2 Downstream Microservice Repository Layout (After Running `sync-microservice`)
+
+When `sync-microservice.ps1` / `.sh` is executed against a microservice repo (e.g., `service-a`), the following governance files are planted:
+```text
+service-a/
+├── AGENTS.md                              # Synced Virtual CTO Brain
+├── CLAUDE.md                              # Synced Claude Code adapter
+├── .cursorrules                           # Synced Cursor adapter
+├── CONTRACT.lock                          # Cryptographic SHA-256 lock of generated contract DTOs
+├── .pre-commit-config.yaml                # Local laptop 3-second Gitleaks secret check + linter hook
+├── .gemini/
+│   └── rules/
+│       └── Plant-A-Virtual-CTO.md         # Synced Google Antigravity rule adapter
+├── .github/
+│   ├── copilot-instructions.md            # Synced GitHub Copilot adapter
+│   ├── CODEOWNERS                         # Locks deps, migrations & contracts to @cto-handle @deputy-lead-handle
+│   ├── PULL_REQUEST_TEMPLATE.md           # Enforces Track selection, [CTO-OVERRIDE], & AI/PII sign-off
+│   └── workflows/
+│       └── ci-gates.yml                   # Self-contained 4-Gate CI pipeline (works on Personal & Org repos)
+└── src/
+    └── generated/
+        └── contracts/                     # Auto-generated strict DTOs/types (Protected by CONTRACT.lock)
+```
+
+---
+
+## 3. Branching, Release Promotion (`feature/* → UAT → MAIN`) & Override Governance
+
+### 3.1 Environment & Branch Promotion Flow
+All microservice repositories follow a strict two-stage promotion pipeline (ISO 27001 A.8.31 Separation of Development, Test, and Operational Environments):
+
+1. **Feature / Bugfix / Hotfix Branches (`feature/*`, `fix/*`, `hotfix/*`) → `UAT` Branch:**
+   - Developers branch off `UAT` (or `main` for hotfixes) and open Pull Requests targeting **`UAT`**.
+   - **Full Feature Gate Enforcement:** CI Gate 1 enforces the **`< 400 LOC` cap**, mandatory **`SPEC-XXX` or `[FAST-TRACK]`** reference, **`CONTRACT.lock` SHA-256 verification**, **mandatory test file modification**, and **human peer review**.
+   - Merging to `UAT` triggers automated deployment to the **UAT Environment**, followed by **Gate 4 Post-Deploy Canary `/health` check**, and `.github/workflows/wip-queue-sync.yml` automatically updates the linked Spec Issue to `status:uat`.
+2. **Release Promotion PR (`UAT` → `MAIN` Branch):**
+   - Once verified in UAT, a Release Promotion PR is opened from **`UAT` into `MAIN`**.
+   - **Automatic Release Mode Detection in CI:** Gate 1 (`reusable-sdge-gates.yml` / `ci-gates.yml`) automatically detects when `base_ref == main` and `head_ref == UAT`. Because a release promotion bundles multiple already-reviewed feature PRs, **Gate 1 automatically bypasses the 400-LOC cap and single-file test diff check**, while still running **Gate 2 (Gitleaks/Semgrep/CVE)**, **Gate 3 (Full Test Suite)**, and **Gate 4 (Production Post-Deploy Canary `/health` check)**.
+   - Merging to `MAIN` automatically closes the linked `SPEC-XXX` GitHub Issue as `status:done` (`SHIPPED (MAIN)`).
+
+### 3.2 Startup Pragmatism: The `[CTO-OVERRIDE]` Escape Hatch
+Rules exist to prevent chaos, not to paralyze urgent business delivery. When a legitimate startup situation requires bypassing a **soft architectural rule** (such as a mechanical migration exceeding `400 LOC`, adding an urgent dependency before writing an ADR, or making an intentional pre-launch breaking contract change):
+
+* **How to Invoke:** Include **`[CTO-OVERRIDE: <concise business justification>]`** in the Pull Request title or body, and obtain review approval from `@cto-handle` or `@deputy-lead-handle`.
+* **What `[CTO-OVERRIDE]` Waives (Soft Governance Rules):**
+  1. The `400 LOC` Pull Request size limit.
+  2. Pre-implementation `SPEC-XXX` link requirement.
+  3. `ADR-XXX` requirement when modifying `package.json` / `pyproject.toml` / `pubspec.yaml`.
+  4. Mandatory test file presence check (e.g., for pure configuration or infrastructure PRs).
+  5. `oasdiff` breaking contract blocker in `contract-breaking-change-gate.yml`.
+* **What `[CTO-OVERRIDE]` NEVER Waives (Hard Security & Integrity Rules):**
+  1. **Gate 2 Secret Scanning (Gitleaks):** Hardcoded secrets/keys are **never** allowed.
+  2. **Gate 2 SAST & Critical CVE Checks:** Exploitable vulnerabilities are still blocked.
+  3. **Gate 3 Existing Test Suite Execution:** Existing unit and integration tests must still pass (`0` regressions).
+  4. **Mandatory Human Peer Approval & AI/PII Attestation Checkboxes.**
+* **SOC 2 / ISO 27001 Audit Trail:** Every `[CTO-OVERRIDE: ...]` is automatically logged in CI output and extracted into `EXCEPTIONS-AND-HOTFIX-REGISTER.md` by `scripts/export-audit-evidence.ps1` as a formally authorized management exception.
+
+### 3.3 Deputy Tech Lead Delegation (Zero Bus-Factor Bottleneck)
+To ensure the CTO is never a single point of failure when traveling or in meetings, `microservice-template/.github/CODEOWNERS` assigns ownership of protected files (`package.json`, `pyproject.toml`, `prisma/`, `alembic/`, `contracts/`, `.github/workflows/`) to **both `@cto-handle` and `@deputy-lead-handle`**. Either leader can approve `CODEOWNERS`-protected Pull Requests.
+
+---
+
+## 4. The 3-Track Development Lifecycle & Zero-Conflict WIP Queue
+
+Every Pull Request targeting `UAT` (or `MAIN` for hotfixes) must declare one of three tracks:
+
+### 4.1 Track 1: Fast Track (`[FAST-TRACK]`)
+* **Eligibility Criteria:**
+  * Total diff is **`< 100 LOC`** (excluding lockfiles/generated code), **AND**
+  * **Zero modifications** to dependencies (`package.json`, `pyproject.toml`, `pubspec.yaml`), database migrations, OpenAPI/Event contracts, or auth/security middleware.
+* **Requirements:** Prefix PR title or body with `[FAST-TRACK]` + Issue ID (`#123` or `ISSUE-123`), include a regression unit test, and pass CI Gates 1–3 + 1 peer review.
+
+### 4.2 Track 2: Spec Track (`SPEC-XXX` — Standard Feature Track)
+* **Eligibility Criteria:** Any PR `>= 100 LOC`, any new feature, or any change touching dependencies, database schemas, auth/security, or cross-service contracts.
+* **4-Stage Execution:**
+  1. **Stage 1 (1-Page Spec & WIP Check):** Open a GitHub Issue using `.github/ISSUE_TEMPLATE/1-page-spec.yml` (or commit `specs/SPEC-XXX-title.md`).
+  2. **Stage 2 (Contract Lock):** If APIs or events change, merge the OpenAPI/JSON Schema PR in `Plant-A-Virtual-CTO` first and run `generate-sdk`.
+  3. **Stage 3 (Stacked Implementation PRs `< 400 LOC`):** Implement code + 5-Layer Tests in small, reviewable PRs referencing `SPEC-XXX`.
+  4. **Stage 4 (Automated Gates & Promotion):** Merge `feature/* → UAT`, verify Canary check, then promote `UAT → MAIN`.
+
+### 4.3 Track 3: Emergency Hotfix Track (`[HOTFIX-TRACK]`)
+* **Eligibility Criteria:** Critical production outage (`SEV-1` / `SEV-2`) or active security vulnerability remediation.
+* **Requirements:**
+  * Prefix PR title with `[HOTFIX-TRACK]`, keep diff **`< 200 LOC`**, and pass Gate 2 (Gitleaks/SAST) + Gate 3 (existing tests).
+  * **Mandatory 24-Hour Post-Mortem Rule (ISO 27001 A.8.32):** Within **24 hours** of merging a hotfix, the author must merge a retroactive `specs/SPEC-HOTFIX-XXX.md` documenting Root Cause, Blast Radius, and a permanent regression test.
+
+### 4.4 How the Zero-Conflict WIP Queue Works ("Swap, Don't Stack")
+* **Hard WIP Limit:** Each developer is strictly limited to **1 `status:active` Spec** at any given time.
+* **Handling Ad-Hoc Founder/Boss Requests (`triage-boss-idea.skill.md`):**
+  * When the founder or boss requests an unplanned feature mid-week, the developer runs `ai-context/triage-boss-idea.skill.md` (or fills out `.github/ISSUE_TEMPLATE/boss-triage-swap.yml`) to generate a **30-Minute Trade-Off Card** (T-Shirt size `S/M/L`, affected services, and which active Spec must be paused).
+  * **Automated Bot Enforcement (`wip-queue-sync.yml`):** When a developer is assigned a new GitHub Issue with label `status:active`, the GitHub Action automatically flips their previous `status:active` Issue to `status:paused`, posts an audit comment on the paused Issue, and commits an updated `specs/WIP-QUEUE.md` directly to `main`.
+
+---
+
+## 5. Cross-Repo Contract Safety (`oasdiff` + `CONTRACT.lock`)
+
+1. **Contract-First Law:**
+   - Microservices, Angular frontends, and Mobile apps **MUST NEVER** invent ad-hoc JSON payloads or hand-write duplicate DTO interfaces for cross-service calls.
+   - All REST endpoints must be defined in `contracts/openapi/<service>.openapi.yaml` (OpenAPI 3.1) and all async events in `contracts/events/<event>.schema.json`.
+2. **Automated Breaking-Change Blocker (`contract-breaking-change-gate.yml`):**
+   - Every PR modifying `contracts/` runs **`oasdiff breaking`** against `origin/main`.
+   - Deleting an endpoint, removing/renaming a response property, changing a field type, or adding a new required request property without bumping the path version (`/v2/...`) **fails CI immediately**.
+3. **Generating SDKs & Cryptographic `CONTRACT.lock` (`generate-sdk.ps1` / `generate-sdk.sh`):**
+   - Run `generate-sdk.ps1` (Windows) or `generate-sdk.sh` (macOS/Linux) from either a local `Plant-A-Virtual-CTO` checkout or directly against the remote GitHub URL (`-RemoteHubUrl`).
+   - The generator outputs strict TypeScript interfaces (`node` / `angular` / `mobile`) or Pydantic v2 models (`python`) into `src/generated/contracts/` and writes a root **`CONTRACT.lock`** file containing `contracts_sha256` and `sdk_output_sha256`.
+   - **Never Hand-Edit `src/generated/contracts/`:** CI Gate 1 recomputes the SHA-256 hash of `src/generated/contracts/` on every PR and compares it against `CONTRACT.lock`. Any manual edit to generated files blocks the PR.
+
+---
+
+## 6. Brownfield ("Service A") vs. Greenfield ("Service B") Operational Runbook
+
+### 6.1 Maintaining an Existing Production Service ("Service A" — Brownfield Rules)
 1. **Do Not Copy Legacy Anti-Patterns:**
-   - Existing files in production may contain legacy patterns predating this standard. **AI agents MUST NOT mimic legacy patterns** found in surrounding files (such as untyped `any`, raw SQL in controllers, or deprecated Pydantic v1 methods).
-   - All newly written or modified functions must strictly follow the **Golden Stack** below.
-2. **"Touch an Endpoint, Lock Its Contract & Add Characterization Tests":**
-   - You do not need to write OpenAPI specs or tests for untouched legacy endpoints.
-   - However, **before modifying an existing production endpoint**, extract its current contract into `contracts/openapi/` (using `ai-context/reverse-engineer-contract.skill.md`) and write a characterization/integration test locking its existing behavior so your changes do not break live clients.
-3. **Zero Unrelated Refactoring in Feature PRs:**
-   - Never let an AI tool reformat or refactor untouched functions in a legacy file during a feature PR. Keep diffs surgical (`< 400 LOC`).
-4. **Backward Compatibility for Live Production Services:**
-   - **Database Migrations (Expand-and-Contract):** Never drop or rename an active production DB column in the same release that deploys code changes.
-   - **API Versioning:** Never remove required fields or change field types in live endpoints consumed by Mobile or Angular clients without versioning.
+   - Existing files in `Service A` may contain legacy code predating `Plant-A-Virtual-CTO` (e.g., `any` types, raw SQL inside controllers, missing tests, or Pydantic v1 `.dict()`).
+   - **AI agents MUST NEVER mimic legacy anti-patterns** found in neighboring files. All newly written or modified functions must strictly conform to Section 7 (Golden Stack).
+2. **Diff-Only CI Quality Gates (Zero Legacy Halt):**
+   - CI Gate 2 (Semgrep SAST) and Gate 3 (Linter + `>= 85%` coverage) inspect **only the files modified in the current PR (`git diff --name-only`)**. Untouched legacy files will never block your PR.
+3. **"Touch an Endpoint, Lock Its Contract" (`reverse-engineer-contract.skill.md`):**
+   - Do not halt feature delivery to write OpenAPI specs for 50 untouched legacy routes.
+   - However, **before modifying an existing legacy endpoint**, run `ai-context/reverse-engineer-contract.skill.md` to extract its current request/response signature into `contracts/openapi/`, and add a characterization integration test locking its baseline behavior before changing it.
+4. **Surgical Diffs Only:**
+   - Never allow an AI assistant to reformat, reorder imports, or refactor untouched functions inside a legacy file during a feature PR.
+5. **Expand-and-Contract Database Migrations:**
+   - Never drop, rename, or add a non-nullable column without a default value on an active production table in a single release. Use a 2-step Expand-and-Contract migration so live containers do not crash during rolling deployments.
+
+### 6.2 Starting a New Service From Scratch ("Service B" — Greenfield Rules)
+1. **Day-1 Setup:** Create the repository, run `scripts/sync-microservice.ps1 -TargetRepoPath "..\service-b" -Stack "<node|python|angular|mobile>"`, and install local pre-commit hooks (`pre-commit install`).
+2. **Spec & Contract First:** Merge `SPEC-001` and `contracts/openapi/service-b.openapi.yaml` in `Plant-A-Virtual-CTO`, then run `generate-sdk.ps1` to scaffold `src/generated/contracts/` and `CONTRACT.lock` before writing the first controller.
+3. **100% Golden Stack Compliance:** Every file in a Greenfield repository must follow the Golden Stack architecture (`Controller/Router → Service/UseCase → Repository/DAO`) from commit #1.
 
 ---
 
-## 3. SOC 2 & ISO 27001 Mandatory Security Rules (ISO A.8.28 Secure Coding)
+## 7. Golden Stack Coding Standards & Explicitly Banned Patterns
 
-All AI agents and developers MUST enforce these security controls on every line of code:
+### 7.1 Node.js & TypeScript Microservices (`-Stack "node"`)
+* **Runtime & Compiler:** Node.js LTS + TypeScript (`strict: true`, `noImplicitAny: true`, `strictNullChecks: true`).
+* **Framework & Architecture:** NestJS or Fastify (match the existing repo; never mix both). Strict 3-layer separation:
+  * `Controller / Route Handler`: HTTP parsing, status codes, and delegating to Service only. Zero business logic or ORM queries.
+  * `Service / Domain`: Pure business logic and transaction orchestration.
+  * `Repository / Data Access`: Parameterized **Prisma** or **Drizzle ORM** queries only.
+* **Validation & Error Format:** Validate all inputs via **Zod** or `class-validator` (`whitelist: true`, `forbidNonWhitelisted: true`) aligned with `src/generated/contracts/`. Return errors exclusively as **RFC 7807 Problem Details (`application/problem+json`)** with a `traceId`.
+* **Explicitly Banned in Node.js/TS:**
+  * ❌ `any`, `as any`, `@ts-ignore`, or `@ts-expect-error` without an inline explanation.
+  * ❌ `axios` or `request` (use native `fetch` or the internal typed HTTP client).
+  * ❌ `moment.js` (use native `Intl` or `date-fns`).
+  * ❌ Unhandled floating promises or raw `console.log` in production code (use structured JSON logger with PII redaction).
 
-1. **AI Data Privacy & Confidentiality (ISO A.5.12 / SOC 2 Confidentiality):**
-   - **NEVER** paste production customer PII, PHI, payment data, `.env` files, private keys, JWT secrets, or proprietary production database dumps into any AI prompt or context window.
-2. **Zero Secrets in Code (Enforced by Gitleaks CI Gate):**
-   - Never hardcode API keys, passwords, tokens, connection strings, or private certificates—even in test files.
-3. **Input Validation & Injection Prevention (OWASP Top 10):**
-   - Validate all external inputs against strict schemas (Zod / Pydantic v2 / `class-validator`) with `additionalProperties: false` / `extra="forbid"`.
-   - Never construct SQL, NoSQL, OS shell commands, or LLM prompts via raw string concatenation with untrusted input.
-4. **Authentication, Authorization & Tenant Isolation (SOC 2 CC6.1):**
-   - Every endpoint (unless explicitly marked `@Public()`) must verify authentication AND check resource-level authorization (preventing IDOR / cross-tenant data leakage).
-5. **Safe Logging & Error Handling (ISO A.8.15 Logging):**
-   - Never log passwords, Authorization headers, session tokens, or full PII objects.
-   - Return standardized **RFC 7807 Problem Details** with a `traceId`; never leak raw stack traces to clients.
-6. **Supply Chain & Dependency Lock (ISO A.8.28 / A.8.32):**
-   - **NEVER** add a new package to `package.json`, `pyproject.toml`, `requirements.txt`, or `pubspec.yaml` without an approved `ADR-XXX`.
+### 7.2 Python Microservices & AI Services (`-Stack "python"`)
+* **Runtime & Tooling:** Python 3.11+, formatted and linted with **`ruff`**, type-checked with **`mypy --strict`**.
+* **Framework & Validation:** **FastAPI** + **Pydantic v2** (`model_validate`, `model_dump`, `ConfigDict(extra="forbid")`).
+* **Database & Migrations:** **SQLAlchemy 2.0 Async** (`AsyncSession`, `select()`) + **Alembic** migrations.
+* **Explicitly Banned in Python:**
+  * ❌ Untyped function arguments or missing return type annotations (`def foo(x):`).
+  * ❌ Deprecated Pydantic v1 methods (`.dict()`, `.parse_obj()`, `@validator`).
+  * ❌ Synchronous blocking I/O (`requests.get()`, `time.sleep()`, synchronous `psycopg2`) inside `async def` endpoints.
+  * ❌ Bare `except:` or `except Exception: pass`, `eval()`, `exec()`, or `pickle.loads()` on untrusted data.
 
----
+### 7.3 Angular Web Frontend (`-Stack "angular"`)
+* **Architecture:** **Standalone Components (`standalone: true`)**, **Angular Signals (`signal`, `computed`, `effect`)** for state, and **`ChangeDetectionStrategy.OnPush`** on all components.
+* **API Integration:** Consume generated OpenAPI TypeScript services/DTOs from `src/generated/contracts/` only.
+* **Explicitly Banned in Angular:**
+  * ❌ Creating new `NgModule` declarations.
+  * ❌ Hand-writing duplicate backend interfaces or hardcoding API base URLs inside components.
+  * ❌ Calling methods/functions directly inside HTML template bindings (use `computed()` signals or pure pipes).
+  * ❌ Unsubscribed RxJS `subscribe()` calls without `takeUntilDestroyed()` or `AsyncPipe`.
 
-## 4. Golden Stack Standards by Technology
-
-### 4.1 Node.js & TypeScript Microservices
-- **Runtime & Language:** Node.js LTS + TypeScript (`strict: true`, `noImplicitAny: true`).
-- **Framework:** NestJS or Fastify (match existing repo; never mix frameworks).
-- **Database & ORM:** Prisma or Drizzle ORM (parameterized queries only; Expand-and-Contract migrations).
-- **Testing Stack:** Vitest or Jest + Supertest + Testcontainers (real Postgres/Redis in integration tests).
-- **Banned in New/Modified Code:** `any`, `@ts-ignore`, `axios` (use native `fetch` or internal client), `moment.js`, floating promises, `eval()`.
-
-### 4.2 Python Microservices & AI/Data Services
-- **Runtime & Tooling:** Python 3.11+, `ruff`, `mypy --strict` on new/modified modules.
-- **Framework:** FastAPI + Pydantic v2 (`model_validate`, `ConfigDict(extra="forbid")`).
-- **Database:** SQLAlchemy 2.0 async + Alembic migrations.
-- **Testing Stack:** `pytest` + `pytest-asyncio` + `httpx.AsyncClient` + `schemathesis` (OpenAPI property testing).
-- **Banned in New/Modified Code:** Untyped functions, Pydantic v1 `.dict()`, synchronous `requests` inside `async def` routes, `pickle.loads()` on untrusted data, bare `except:`.
-
-### 4.3 Angular Web Frontend
-- **Architecture:** Standalone Components (`standalone: true`), Angular Signals (`signal`, `computed`), `ChangeDetectionStrategy.OnPush`.
-- **Testing Stack:** Vitest/Jest + Angular Testing Library + MSW (Mock Service Worker driven by OpenAPI schemas) + Playwright for critical E2E flows.
-- **API Consumption:** OpenAPI-generated services/types only; never hardcode URLs or duplicate backend interfaces.
-
-### 4.4 Mobile Applications (Flutter / React Native / Native)
-- **Contract Alignment:** Consume generated OpenAPI models; handle older/newer API fields gracefully (`ignoreUnknownFields`).
-- **Testing Stack:** Widget/Component tests against OpenAPI mock responses + Maestro (or integration_test) for critical device flows.
-- **Secure Storage:** Store auth tokens exclusively in hardware-backed secure storage (`Keychain` / `EncryptedSharedPreferences`).
+### 7.4 Mobile Applications (`-Stack "mobile"` — Flutter / React Native)
+* **Architecture:** Strict `Presentation (Widgets/Screens) → Domain (UseCases/State) → Data (Repositories/API Client)` separation.
+* **Contract & Offline Resilience:** Consume generated OpenAPI models (`src/generated/contracts/`) configured with `ignoreUnknownFields` so additive backend fields never crash older mobile app versions in the App Store / Play Store.
+* **Security Storage:** Auth/refresh tokens and sensitive user state MUST be stored in hardware-backed encrypted storage (**iOS Keychain** / **Android EncryptedSharedPreferences** via `flutter_secure_storage` or `expo-secure-store`).
+* **Explicitly Banned in Mobile:**
+  * ❌ Direct HTTP/Dio/fetch calls inside UI Widgets or Screen components.
+  * ❌ Storing JWTs, session tokens, or PII in unencrypted `SharedPreferences` or `AsyncStorage`.
 
 ---
 
-## 5. Full-Fledged 5-Layer Testing Standard (Anti-AI-Hallucination Rules)
+## 8. Full-Fledged 5-Layer Testing Architecture (Anti-AI-Mock Rules)
 
-AI coding tools frequently write **tautological mock tests** (mocking a function and asserting the mock returns what it was told to return). **Tautological mock tests are strictly banned.** Every feature PR must implement the appropriate layers of our **5-Layer Testing Trophy**:
+AI coding assistants frequently try to "cheat" test requirements by writing **tautological mock tests**—mocking the service or ORM and asserting that the mock returned the hardcoded value it was just told to return. **Tautological mocks are strictly forbidden and blocked by CI Gate 3.**
 
-1. **Layer 1 — Spec-Derived Test Cases (No Implementation Bias):**
-   - Generate test cases directly from **Section 6 of `SPEC-XXX`** and the locked **OpenAPI/Event contract**, *not* by asking AI to summarize implementation code it just wrote.
-2. **Layer 2 — Pure Domain Unit Tests (`>= 85%` Diff Coverage Required):**
-   - Test business rules, calculations, validators, and state transitions in `services/` and UI signals/pipes.
-   - **Anti-Mock Rule:** Never mock internal domain classes or the unit under test. Only mock external I/O boundaries (third-party HTTP APIs, payment gateways, LLM providers, clock/time).
-3. **Layer 3 — Real-Database & Repository Integration Tests (No Mocked ORMs):**
-   - Do **not** mock Prisma, Drizzle, or SQLAlchemy in repository tests—mocked ORMs hide broken SQL queries, missing migrations, and constraint violations.
-   - Run repository/service integration tests against an ephemeral test database (Docker `Testcontainers` or CI service containers) with real migrations applied.
-4. **Layer 4 — Contract Conformance & Security Negative Tests (ISO 27001 A.8.29):**
-   - Every new or modified API endpoint MUST have automated HTTP integration tests verifying:
-     - **2xx Happy Path:** Response body strictly validates against the OpenAPI 3.1 schema.
-     - **400 Validation Gate:** Malformed/extra fields return RFC 7807 `application/problem+json`.
-     - **401 / 403 Tenant Isolation (IDOR Security Test):** User from `Tenant A` attempting to read/modify `Tenant B`'s resource is rejected with `403` or `404`.
-5. **Layer 5 — Contract-Driven Frontend/Mobile & Critical-Path E2E Tests:**
-   - Angular and Mobile tests must mock network responses using payloads validated against `contracts/openapi/<service>.openapi.yaml` (via MSW / Prism), never hand-invented JSON fixtures.
-   - Core revenue/auth user journeys require a passing Playwright (Web) or Maestro (Mobile) E2E smoke test.
+Every feature PR must satisfy our **5-Layer Testing Trophy**:
+
+| Layer | Target Scope | Mandatory Technical Standard | What Is Strictly Banned |
+| :--- | :--- | :--- | :--- |
+| **Layer 1: Spec-Derived Test Matrix** | Section 4/6 of `SPEC-XXX` | Derive test cases directly from the approved `SPEC-XXX` acceptance matrix and `contracts/openapi/`, *before* or *independently of* implementation code. | ❌ Generating tests by prompting AI to *"write unit tests for the function you just wrote"* (which bakes bugs into the test). |
+| **Layer 2: Pure Domain Unit Tests** | `services/`, validators, calculations, Angular Signals/Pipes | Must achieve **`>= 85%` line & branch coverage on all files modified in the PR**. Mock only external 3rd-party boundaries (Stripe, SendGrid, LLM API, system clock). | ❌ Mocking internal domain classes or the class under test.<br>❌ Weak assertions (`expect(res).toBeDefined()`). |
+| **Layer 3: Real-DB Integration Tests** | `repositories/`, ORM queries, DB transactions & constraints | Run against a **real ephemeral PostgreSQL 16 container** (via Docker `Testcontainers` locally and the `postgres:16-alpine` service container in CI Gate 3) with real migrations applied. | ❌ `jest.mock('@prisma/client')`, `vi.mock`, or `unittest.mock.MagicMock(AsyncSession)` in repository/integration tests (CI Gate 3 fails if detected). |
+| **Layer 4: Contract & 403 IDOR Security Tests** | All REST controllers / FastAPI routers | Every endpoint test suite must assert:<br>1. `200/201` response matches OpenAPI schema.<br>2. `400/422` invalid payload returns RFC 7807 JSON.<br>3. `401` unauthenticated request is rejected.<br>4. **`403/404` Cross-Tenant IDOR Test:** Authenticated user from `Tenant A` attempting to read/update/delete `Tenant B`'s resource is blocked. | ❌ Testing only the `200 OK` happy path without negative validation (`400`) and cross-tenant authorization (`403`) tests. |
+| **Layer 5: Contract-Mocked UI & E2E Tests** | Angular & Mobile apps | Mock API responses using **MSW (Mock Service Worker)** or **Prism** driven directly by `contracts/openapi/*.yaml`. Cover critical auth/checkout flows with **Playwright** (Web) or **Maestro** (Mobile). | ❌ Hand-inventing fake JSON mock objects in frontend/mobile tests that drift from the backend OpenAPI contract. |
+
+---
+
+## 9. SOC 2 & ISO 27001:2022 Security Rules, Audit Exporter & Compliance Pack
+
+### 9.1 Mandatory Secure Coding & AI Privacy Rules (Enforced on Every Commit)
+1. **Zero Customer PII or Secrets in AI Prompts (ISO 27001 A.5.12 / SOC 2 Confidentiality):**
+   - Never paste production customer PII, PHI, payment data, `.env` files, private keys, or production database dumps into any AI assistant.
+   - Verify your AI coding tool is configured in **Zero-Training / Privacy Mode** per [`compliance/AI-AND-VENDOR-RISK-REGISTER.md`](compliance/AI-AND-VENDOR-RISK-REGISTER.md).
+2. **Zero Hardcoded Secrets (Blocked by Local Pre-Commit & CI Gate 2 Gitleaks):**
+   - Never commit API keys, passwords, JWT secrets, or connection strings—even in test fixtures (use clearly fake placeholders like `test-only-dummy-value-not-a-secret`).
+3. **Parameterized Queries & Strict Input Schemas (ISO 27001 A.8.28):**
+   - Never interpolate variables into raw SQL strings, shell commands, or LLM system prompts.
+4. **Tenant Isolation by Default (SOC 2 CC6.1):**
+   - Every database query on tenant-scoped data MUST filter by the authenticated `tenantId` / `organizationId` extracted from the verified JWT/session token—never from an unverified query parameter or request body field.
+
+### 9.2 Automated Audit Evidence Export & "The Other 80%" Compliance Pack
+* **Monthly & On-Demand GitHub Evidence Bundle (`scripts/export-audit-evidence.ps1` / `.sh` & `.github/workflows/monthly-audit-evidence.yml`):**
+  * Automatically exports merged production PR logs (`*-production-prs.json`), the `[CTO-OVERRIDE]` & `[HOTFIX-TRACK]` exception register (`EXCEPTIONS-AND-HOTFIX-REGISTER.md`), branch protection configurations (`*-branch-protection.json`), collaborator access rosters (`*-access-roster.json`), and a cryptographic `SHA256SUMS.txt` manifest.
+* **Non-GitHub Organizational Compliance Registers (`compliance/`):**
+  * [`compliance/AI-AND-VENDOR-RISK-REGISTER.md`](compliance/AI-AND-VENDOR-RISK-REGISTER.md) — AI tool privacy lockdown settings & third-party subprocessor register.
+  * [`compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md`](compliance/QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md) — Quarterly access review log, Cloud IAM MFA, AES-256 DB encryption, quarterly DB backup restoration test log, laptop BitLocker/FileVault disk encryption, and 24-hour offboarding SLA.
+  * [`compliance/INCIDENT-RESPONSE-PLAYBOOK.md`](compliance/INCIDENT-RESPONSE-PLAYBOOK.md) — `SEV-1/2/3` SLAs, 30-minute secret leak rotation runbook, and annual Tabletop Exercise log.
+
+---
+
+## 10. CI/CD Pipeline Technical Reference (Gates 1–4)
+
+Every microservice repository runs `.github/workflows/ci-gates.yml` (synced from `.github/workflows/reusable-sdge-gates.yml`), which executes four sequential gates:
+
+| Gate | Job Name | What It Verifies Technically | Failure Condition |
+| :--- | :--- | :--- | :--- |
+| **Gate 1** | `change-control-gate` | 1. Detects `UAT → MAIN` release promotion vs. `feature/* → UAT` PRs.<br>2. Checks for `[CTO-OVERRIDE: reason]` or `[HOTFIX-TRACK]`.<br>3. Enforces `< 400 LOC` cap (or `< 200 LOC` for hotfixes).<br>4. Blocks `package.json`/`pyproject.toml`/`pubspec.yaml` edits lacking `ADR-XXX`.<br>5. Enforces `SPEC-XXX` (`>= 100 LOC` or DB/Contract/Dep touch) or `[FAST-TRACK]`.<br>6. Verifies at least one test file (`*.spec.*`, `*.test.*`, `test_*.py`) was modified when `src/` changes.<br>7. Verifies mandatory PR template sign-off checkboxes (`[x]`).<br>8. Recomputes SHA-256 of `src/generated/contracts/` and verifies it matches `CONTRACT.lock`. | Fails immediately in `< 10s` if any governance rule or `CONTRACT.lock` hash is violated. |
+| **Gate 2** | `security-compliance-gate` | 1. Runs **Gitleaks** across git commits to detect leaked secrets/keys.<br>2. Runs **Semgrep (`p/owasp-top-ten`)** SAST on modified files.<br>3. Runs `npm audit --audit-level=high` or `pip-audit` for dependency CVEs. | Fails if any secret, OWASP Top 10 SAST finding, or High/Critical CVE is detected. |
+| **Gate 3** | `brownfield-quality-gate` | 1. Boots a real **PostgreSQL 16 (`postgres:16-alpine`)** service container.<br>2. Scans modified integration tests (`*.int.spec.*`, `tests/integration/`) and blocks mocked ORMs (`jest.mock('@prisma/client')`, `MagicMock(AsyncSession)`).<br>3. Runs stack linter (`eslint`/`tsc`, `ruff`/`mypy --strict`, `ng lint`, `flutter analyze`) on modified files.<br>4. Runs full test suite and verifies **`>= 85%` diff coverage** on touched files. | Fails if lint/types fail, if an ORM is mocked in integration tests, or if diff coverage drops below `85%`. |
+| **Gate 4** | `post-deploy-canary-gate` | Triggered on `push` to `UAT` or `MAIN`. Polls the deployed service's `/health` endpoint (`5` retries, `5s` interval) expecting HTTP `200 OK`. | Alerts and marks deployment failed if the service fails to boot or `/health` returns non-`200`. |
+
+---
+
+## 11. Command-Line Operations & Maintenance Cheatsheet
+
+### A. Plant or Update Virtual CTO Governance in Any Microservice Repo
+```powershell
+# Windows PowerShell (Stacks: "node", "python", "angular", "mobile")
+.\scripts\sync-microservice.ps1 -TargetRepoPath "..\service-a" -Stack "node"
+```
+```bash
+# macOS / Linux / Git Bash
+./scripts/sync-microservice.sh ../service-a node
+```
+
+### B. Generate Strict Contract DTOs & Stamp `CONTRACT.lock`
+```powershell
+# From local Plant-A-Virtual-CTO checkout:
+.\scripts\generate-sdk.ps1 -TargetRepo "..\service-a" -Stack "node"
+
+# From inside a microservice repo using Remote Hub URL (no local hub checkout required):
+.\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "node" -RemoteHubUrl "https://github.com/your-org/Plant-A-Virtual-CTO.git" -ContractRef "main"
+```
+```bash
+# macOS / Linux / Git Bash
+./scripts/generate-sdk.sh ../service-a node
+# Or remote mode:
+./scripts/generate-sdk.sh . python https://github.com/your-org/Plant-A-Virtual-CTO.git main
+```
+
+### C. Create or Swap a Feature Spec via GitHub CLI (Triggers Auto-WIP Bot)
+```bash
+# Create a new active 1-Page Spec Issue (auto-pauses any older active spec assigned to you):
+gh issue create --template "1-page-spec.yml" --title "[SPEC-018] Add Webhook Retry Queue" --label "spec,status:active" --assignee "@me"
+
+# Or trigger a 30-Minute Boss Ad-Hoc Idea Swap:
+gh issue create --template "boss-triage-swap.yml" --title "[BOSS-TRIAGE] Urgent Partner Export API" --label "spec,boss-triage,status:active" --assignee "@me"
+```
+
+### D. Export Tamper-Evident SOC 2 & ISO 27001 Audit Evidence Bundle
+```powershell
+# Windows PowerShell
+.\scripts\export-audit-evidence.ps1 -Repos @("your-org/service-a", "your-org/service-b", "your-org/Plant-A-Virtual-CTO") -Limit 200
+```
+```bash
+# macOS / Linux / Git Bash
+./scripts/export-audit-evidence.sh "your-org/service-a your-org/service-b your-org/Plant-A-Virtual-CTO" 200
+```
+
+### E. Propose a New Golden Rule, ADR, or Code Example ("Compound AI Memory")
+Ask your AI coding assistant inside `Plant-A-Virtual-CTO`:
+> *"Follow `ai-context/propose-golden-rule.skill.md`. My AI tool just made mistake [X] (or we want to adopt pattern/library [Y]). Draft a concise 2-line addition to `AGENTS.md` (and a 20-line `docs/adr/ADR-XXX.md` if adding a dependency) ready for a Pull Request."*

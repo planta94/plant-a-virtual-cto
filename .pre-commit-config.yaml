@@ -1,0 +1,20 @@
+# Plant-A-Virtual-CTO Hub Repository Pre-Commit Hooks
+# Run `pre-commit install` after cloning to block secrets and broken YAML/JSON in < 3 seconds.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        name: "SOC2/ISO27001 Gate: Block hardcoded secrets & PAT tokens locally"
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+        name: "Validate YAML syntax (workflows & OpenAPI contracts)"
+      - id: check-json
+        name: "Validate JSON syntax (event schemas)"
+      - id: check-merge-conflict
+        name: "Block unresolved Git merge conflict markers"
+      - id: detect-private-key
+        name: "Block private SSH/TLS keys"
