@@ -155,6 +155,17 @@ jobs:
             exit 1
           fi
 
+          # 11. Verify Cross-Repo Contract Lock Integrity (Blocks Hand-Edited Generated DTOs)
+          if [ -f "CONTRACT.lock" ] && [ -d "src/generated/contracts" ]; then
+            EXPECTED_SDK_HASH=$(jq -r '.sdk_output_sha256 // empty' CONTRACT.lock)
+            ACTUAL_SDK_HASH=$(find "src/generated/contracts" -type f | sort | xargs sha256sum | sha256sum | awk '{print $1}')
+            if [ -n "${EXPECTED_SDK_HASH}" ] && [ "${EXPECTED_SDK_HASH}" != "${ACTUAL_SDK_HASH}" ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+              echo "::error::CONTRACT.lock integrity check failed! Files in src/generated/contracts/ were manually modified outside generate-sdk. Run generate-sdk.sh / generate-sdk.ps1 from Plant-A-Virtual-CTO instead."
+              exit 1
+            fi
+            echo "✅ CONTRACT.lock integrity verified (SHA256: ${ACTUAL_SDK_HASH})."
+          fi
+
           echo "✅ Gate 1 (Change Control, Governance & Test Presence) Passed!"
 
   # ===========================================================================
