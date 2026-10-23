@@ -47,7 +47,7 @@ Developers hate process when it means more meetings (Scrum, standups, story-poin
 
 ### Week 1: Establish the Central Hub & Stop Dependency Sprawl
 - [ ] Create the `Plant-A-Virtual-CTO` repository on GitHub and push the files in this directory.
-- [ ] Replace `@cto-handle` in `microservice-template/.github/CODEOWNERS` and `YOUR-GITHUB-ORG` in `microservice-template/.github/workflows/ci-gates.yml` with your real GitHub handle and org name.
+- [ ] Replace `@planta94` in `microservice-template/.github/CODEOWNERS` and `YOUR-GITHUB-ORG` in `microservice-template/.github/workflows/ci-gates.yml` with your real GitHub handle and org name.
 - [ ] Run `.\scripts\sync-microservice.ps1` across your 5+ microservice, Angular, and Mobile repositories.
 - [ ] Enable **Branch Protection** on `main` across all repos:
   - Require pull request reviews before merging

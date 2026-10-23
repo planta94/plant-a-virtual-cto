@@ -45,7 +45,7 @@ Run `.\scripts\export-audit-evidence.ps1` at the end of each quarter to dump the
 
 | Quarter | Review Date | Reviewer (CTO) | GitHub Roster Verified (`export-audit-evidence`) | Cloud IAM & MFA Verified | Unnecessary Access Revoked | Prod DB Backup Restore Tested (Time to Restore) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **2026-Q4** | `2026-10-24` | `@cto-handle` | ✅ Verified (`audit-2026-10-24`) | ✅ 100% MFA | None required | ✅ Tested (`12 mins` to isolated RDS instance) |
-| **2027-Q1** | `YYYY-MM-DD` | `@cto-handle` | ⬜ Pending | ⬜ Pending | — | ⬜ Pending |
-| **2027-Q2** | `YYYY-MM-DD` | `@cto-handle` | ⬜ Pending | ⬜ Pending | — | ⬜ Pending |
-| **2027-Q3** | `YYYY-MM-DD` | `@cto-handle` | ⬜ Pending | ⬜ Pending | — | ⬜ Pending |
+| **2026-Q4** | `2026-10-24` | `@planta94` | ✅ Verified (`audit-2026-10-24`) | ✅ 100% MFA | None required | ✅ Tested (`12 mins` to isolated RDS instance) |
+| **2027-Q1** | `YYYY-MM-DD` | `@planta94` | ⬜ Pending | ⬜ Pending | — | ⬜ Pending |
+| **2027-Q2** | `YYYY-MM-DD` | `@planta94` | ⬜ Pending | ⬜ Pending | — | ⬜ Pending |
+| **2027-Q3** | `YYYY-MM-DD` | `@planta94` | ⬜ Pending | ⬜ Pending | — | ⬜ Pending |

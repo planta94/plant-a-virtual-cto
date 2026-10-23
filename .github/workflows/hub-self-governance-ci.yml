@@ -1,6 +1,8 @@
 name: "Hub Self-Governance CI (SOC 2 & ISO 27001 Verification for Plant-A-Virtual-CTO)"
 
 on:
+  push:
+    branches: [main, master]
   pull_request:
     branches: [main, master]
 
@@ -13,7 +15,7 @@ jobs:
     name: "Verify Hub Secrets, PR Attestation, Scripts & YAML/JSON Integrity"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR Branch
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -24,6 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Gate 2: Verify PR Governance & SOC 2 / ISO 27001 Sign-Off"
+        if: github.event_name == 'pull_request'
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
@@ -34,12 +37,11 @@ jobs:
             exit 1
           fi
 
-          # Warn and flag if critical CI workflows or CODEOWNERS are modified
           CRITICAL_TOUCHED=$(git diff --name-only origin/${BASE_REF}...HEAD -- '.github/workflows/**' '.github/CODEOWNERS' 'microservice-template/**' 'SECURITY.md' || true)
           if [ -n "${CRITICAL_TOUCHED}" ]; then
             echo "⚠️ [SOC 2 CC8.1 / ISO 27001 A.8.32 AUDIT LOG] Critical Hub Governance files modified:"
             echo "${CRITICAL_TOUCHED}"
-            echo "Mandatory @cto-handle or @deputy-lead-handle CODEOWNERS approval required before merge."
+            echo "Mandatory @planta94 or @deputy-lead-handle CODEOWNERS approval required before merge."
           fi
 
       - name: "Gate 3: Validate Bash Scripts, YAML Workflows, JSON Schemas & UTF-8 Encoding"
@@ -59,7 +61,7 @@ jobs:
 
           echo "3. Validating YAML files (workflows, OpenAPI, pre-commit)..."
           python3 -c '
-          import yaml, glob, sys
+          import yaml, glob
           files = glob.glob(".github/**/*.yml", recursive=True) + glob.glob("contracts/openapi/*.yaml") + [".pre-commit-config.yaml", "microservice-template/.pre-commit-config.yaml"]
           for f in files:
               with open(f, "r", encoding="utf-8") as fp:

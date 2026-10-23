@@ -2,20 +2,22 @@
 # Plant-A-Virtual-CTO: Hub Repository CODEOWNERS (SOC 2 CC8.1 / ISO 27001 A.8.32)
 # ==============================================================================
 # Prevents any developer from weakening CI gates, security policies, or sync
-# scripts in the central governance hub without CTO or Deputy Tech Lead approval.
+# scripts in the central governance hub without CTO (@planta94) or Deputy approval.
+# Tip: Append your Deputy Tech Lead's GitHub handle (e.g. `@planta94 @deputy-handle`)
+# once they are added as a repository collaborator.
 
 # 1. Core CI/CD Gatekeepers & Automation Workflows (CRITICAL)
-/.github/workflows/                 @cto-handle @deputy-lead-handle
-/.github/CODEOWNERS                 @cto-handle @deputy-lead-handle
-/microservice-template/             @cto-handle @deputy-lead-handle
-/scripts/                           @cto-handle @deputy-lead-handle
+/.github/workflows/                 @planta94
+/.github/CODEOWNERS                 @planta94
+/microservice-template/             @planta94
+/scripts/                           @planta94
 
 # 2. Master AI Constitution, Security & Compliance Registers
-/AGENTS.md                          @cto-handle @deputy-lead-handle
-/SECURITY.md                        @cto-handle @deputy-lead-handle
-/compliance/                        @cto-handle @deputy-lead-handle
-/ai-context/                        @cto-handle @deputy-lead-handle
-/docs/adr/                          @cto-handle @deputy-lead-handle
+/AGENTS.md                          @planta94
+/SECURITY.md                        @planta94
+/compliance/                        @planta94
+/ai-context/                        @planta94
+/docs/adr/                          @planta94
 
 # 3. Cross-Service API & Event Contracts
-/contracts/                         @cto-handle @deputy-lead-handle
+/contracts/                         @planta94

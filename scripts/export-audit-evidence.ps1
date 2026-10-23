@@ -9,7 +9,7 @@
       3. Branch Protection & CODEOWNERS Configuration Snapshot
       4. Repository Collaborator & Access Permission Roster (for Quarterly Access Reviews - SOC 2 CC6.2 / ISO A.5.18)
 .EXAMPLE
-    .\scripts\export-audit-evidence.ps1 -Repos @("your-username/service-a", "your-username/service-b", "your-username/Plant-A-Virtual-CTO") -Limit 100
+    .\scripts\export-audit-evidence.ps1 -Repos @("planta94/service-a", "planta94/service-b", "planta94/plant-a-virtual-cto") -Limit 100
 #>
 param(
     [Parameter(Mandatory=$true)]

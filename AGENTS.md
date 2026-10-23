@@ -82,7 +82,7 @@ We operate a **Polyrepo Microservice Architecture** without Agile ceremonies (no
 | `scripts/sync-microservice.ps1` & `.sh` | Injects `AGENTS.md`, AI rules, `.pre-commit-config.yaml`, `CODEOWNERS`, PR templates, and `.github/workflows/ci-gates.yml` into any target microservice repo. |
 | `scripts/generate-sdk.ps1` & `.sh` | Generates TypeScript/Pydantic/Angular/Mobile DTOs from `contracts/` (supports local checkout or `-RemoteHubUrl`) and stamps a SHA-256 `CONTRACT.lock`. |
 | `scripts/export-audit-evidence.ps1` & `.sh` | Queries GitHub API across repos to export tamper-evident SOC 2 / ISO 27001 evidence bundles (`SHA256SUMS.txt`). |
-| `.github/CODEOWNERS` | **Hub-Level `CODEOWNERS`.** Locks `.github/workflows/`, `AGENTS.md`, `scripts/`, `contracts/`, and `compliance/` to `@cto-handle @deputy-lead-handle`. |
+| `.github/CODEOWNERS` | **Hub-Level `CODEOWNERS`.** Locks `.github/workflows/`, `AGENTS.md`, `scripts/`, `contracts/`, and `compliance/` to `@planta94 @deputy-lead-handle`. |
 | `.github/ISSUE_TEMPLATE/*.yml` | Structured GitHub Issue Forms (`1-page-spec.yml` and `boss-triage-swap.yml`) that feed `wip-queue-sync.yml`. |
 | `.github/workflows/hub-self-governance-ci.yml` | **Hub Self-Governance CI.** Runs Gitleaks, PR attestation checks, Bash/YAML/JSON syntax checks, and UTF-8 validation on PRs to `Plant-A-Virtual-CTO` itself. |
 | `.github/workflows/reusable-sdge-gates.yml` | Central 4-Gate CI/CD workflow enforcing change control, DevSecOps, 5-Layer QA, and post-deploy Canary health checks. |
@@ -106,7 +106,7 @@ service-a/
 │       └── Plant-A-Virtual-CTO.md         # Synced Google Antigravity rule adapter
 ├── .github/
 │   ├── copilot-instructions.md            # Synced GitHub Copilot adapter
-│   ├── CODEOWNERS                         # Locks deps, migrations & contracts to @cto-handle @deputy-lead-handle
+│   ├── CODEOWNERS                         # Locks deps, migrations & contracts to @planta94 @deputy-lead-handle
 │   ├── PULL_REQUEST_TEMPLATE.md           # Enforces Track selection, [CTO-OVERRIDE], & AI/PII sign-off
 │   └── workflows/
 │       └── ci-gates.yml                   # Self-contained 4-Gate CI pipeline (works on Personal & Org repos)
@@ -134,7 +134,7 @@ All microservice repositories follow a strict two-stage promotion pipeline (ISO 
 ### 3.2 Startup Pragmatism: The `[CTO-OVERRIDE]` Escape Hatch
 Rules exist to prevent chaos, not to paralyze urgent business delivery. When a legitimate startup situation requires bypassing a **soft architectural rule** (such as a mechanical migration exceeding `400 LOC`, adding an urgent dependency before writing an ADR, or making an intentional pre-launch breaking contract change):
 
-* **How to Invoke:** Include **`[CTO-OVERRIDE: <concise business justification>]`** in the Pull Request title or body, and obtain review approval from `@cto-handle` or `@deputy-lead-handle`.
+* **How to Invoke:** Include **`[CTO-OVERRIDE: <concise business justification>]`** in the Pull Request title or body, and obtain review approval from `@planta94` or `@deputy-lead-handle`.
 * **What `[CTO-OVERRIDE]` Waives (Soft Governance Rules):**
   1. The `400 LOC` Pull Request size limit.
   2. Pre-implementation `SPEC-XXX` link requirement.
@@ -149,7 +149,7 @@ Rules exist to prevent chaos, not to paralyze urgent business delivery. When a l
 * **SOC 2 / ISO 27001 Audit Trail:** Every `[CTO-OVERRIDE: ...]` is automatically logged in CI output and extracted into `EXCEPTIONS-AND-HOTFIX-REGISTER.md` by `scripts/export-audit-evidence.ps1` as a formally authorized management exception.
 
 ### 3.3 Deputy Tech Lead Delegation (Zero Bus-Factor Bottleneck)
-To ensure the CTO is never a single point of failure when traveling or in meetings, `microservice-template/.github/CODEOWNERS` assigns ownership of protected files (`package.json`, `pyproject.toml`, `prisma/`, `alembic/`, `contracts/`, `.github/workflows/`) to **both `@cto-handle` and `@deputy-lead-handle`**. Either leader can approve `CODEOWNERS`-protected Pull Requests.
+To ensure the CTO is never a single point of failure when traveling or in meetings, `microservice-template/.github/CODEOWNERS` assigns ownership of protected files (`package.json`, `pyproject.toml`, `prisma/`, `alembic/`, `contracts/`, `.github/workflows/`) to **both `@planta94` and `@deputy-lead-handle`**. Either leader can approve `CODEOWNERS`-protected Pull Requests.
 
 ---
 
@@ -337,13 +337,13 @@ Every microservice repository runs `.github/workflows/ci-gates.yml` (synced from
 .\scripts\generate-sdk.ps1 -TargetRepo "..\service-a" -Stack "node"
 
 # From inside a microservice repo using Remote Hub URL (no local hub checkout required):
-.\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "node" -RemoteHubUrl "https://github.com/your-org/Plant-A-Virtual-CTO.git" -ContractRef "main"
+.\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "node" -RemoteHubUrl "https://github.com/planta94/plant-a-virtual-cto.git" -ContractRef "main"
 ```
 ```bash
 # macOS / Linux / Git Bash
 ./scripts/generate-sdk.sh ../service-a node
 # Or remote mode:
-./scripts/generate-sdk.sh . python https://github.com/your-org/Plant-A-Virtual-CTO.git main
+./scripts/generate-sdk.sh . python https://github.com/planta94/plant-a-virtual-cto.git main
 ```
 
 ### C. Create or Swap a Feature Spec via GitHub CLI (Triggers Auto-WIP Bot)
@@ -358,11 +358,11 @@ gh issue create --template "boss-triage-swap.yml" --title "[BOSS-TRIAGE] Urgent 
 ### D. Export Tamper-Evident SOC 2 & ISO 27001 Audit Evidence Bundle
 ```powershell
 # Windows PowerShell
-.\scripts\export-audit-evidence.ps1 -Repos @("your-org/service-a", "your-org/service-b", "your-org/Plant-A-Virtual-CTO") -Limit 200
+.\scripts\export-audit-evidence.ps1 -Repos @("planta94/service-a", "planta94/service-b", "planta94/plant-a-virtual-cto") -Limit 200
 ```
 ```bash
 # macOS / Linux / Git Bash
-./scripts/export-audit-evidence.sh "your-org/service-a your-org/service-b your-org/Plant-A-Virtual-CTO" 200
+./scripts/export-audit-evidence.sh "planta94/service-a planta94/service-b planta94/plant-a-virtual-cto" 200
 ```
 
 ### E. Propose a New Golden Rule, ADR, or Code Example ("Compound AI Memory")

@@ -4,7 +4,7 @@
 - **Author:** `@github-handle`
 - **Status:** `Draft` | `Approved` | `Contract-Locked` | `In-Implementation` | `Shipped`
 - **Created:** `YYYY-MM-DD`
-- **Approved By (CTO/Tech Lead):** `@cto-handle`
+- **Approved By (CTO/Tech Lead):** `@planta94`
 
 ---
 

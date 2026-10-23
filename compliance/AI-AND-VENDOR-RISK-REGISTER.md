@@ -36,8 +36,8 @@ compliance/evidence-bundles/
 
 | Vendor Name | Category | Data Processed | Compliance Certifications Verified | Risk Level | Last Reviewed Date | Reviewer |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **GitHub, Inc.** | Source Control & CI/CD | Source code, CI logs, PR audit trail | SOC 2 Type II, ISO 27001 | Critical | `YYYY-MM-DD` | `@cto-handle` |
-| **AWS / GCP / Azure** | Cloud Hosting & Managed DB | Production app data, customer PII, encrypted backups | SOC 2 Type II, ISO 27001 | Critical | `YYYY-MM-DD` | `@cto-handle` |
-| **OpenAI, LLC** | AI Coding / LLM API | Code snippets (Zero-training opted out) | SOC 2 Type II | Medium | `YYYY-MM-DD` | `@cto-handle` |
-| **Anthropic, PBC** | AI Coding / Claude API | Code snippets (Zero-training API/Team) | SOC 2 Type II, ISO 27001 | Medium | `YYYY-MM-DD` | `@cto-handle` |
-| **Anysphere (Cursor)** | AI IDE | Ephemeral code context (`Privacy Mode = ON`) | SOC 2 Type II | Medium | `YYYY-MM-DD` | `@cto-handle` |
+| **GitHub, Inc.** | Source Control & CI/CD | Source code, CI logs, PR audit trail | SOC 2 Type II, ISO 27001 | Critical | `YYYY-MM-DD` | `@planta94` |
+| **AWS / GCP / Azure** | Cloud Hosting & Managed DB | Production app data, customer PII, encrypted backups | SOC 2 Type II, ISO 27001 | Critical | `YYYY-MM-DD` | `@planta94` |
+| **OpenAI, LLC** | AI Coding / LLM API | Code snippets (Zero-training opted out) | SOC 2 Type II | Medium | `YYYY-MM-DD` | `@planta94` |
+| **Anthropic, PBC** | AI Coding / Claude API | Code snippets (Zero-training API/Team) | SOC 2 Type II, ISO 27001 | Medium | `YYYY-MM-DD` | `@planta94` |
+| **Anysphere (Cursor)** | AI IDE | Ephemeral code context (`Privacy Mode = ON`) | SOC 2 Type II | Medium | `YYYY-MM-DD` | `@planta94` |

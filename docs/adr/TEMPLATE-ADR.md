@@ -3,7 +3,7 @@
 - **Date:** `YYYY-MM-DD`
 - **Status:** `Proposed` | `Accepted` | `Rejected` | `Superseded`
 - **Proposed By:** `@github-handle`
-- **Approved By (CTO/Lead):** `@cto-handle`
+- **Approved By (CTO/Lead):** `@planta94`
 
 ---
 

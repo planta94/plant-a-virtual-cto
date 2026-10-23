@@ -10,7 +10,7 @@
 # Usage (Local Hub):
 #   ./scripts/generate-sdk.sh ../service-a node
 # Usage (Remote Hub from inside a microservice repo):
-#   ./scripts/generate-sdk.sh . python https://github.com/your-org/Plant-A-Virtual-CTO.git main
+#   ./scripts/generate-sdk.sh . python https://github.com/planta94/plant-a-virtual-cto.git main
 # ==============================================================================
 set -euo pipefail
 

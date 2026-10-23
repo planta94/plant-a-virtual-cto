@@ -1,37 +1,38 @@
 # =============================================================================
-# SDGE Automated Governance CODEOWNERS (With Backup / Deputy Approver)
-# Prevents CTO bottleneck and satisfies SOC 2 Segregation of Duties (when the
-# CTO writes code, @deputy-lead-handle can review & approve the CTO's PR).
-# Replace @cto-handle and @deputy-lead-handle with your actual GitHub usernames.
+# Plant-A-Virtual-CTO: Microservice CODEOWNERS (With Backup / Deputy Approver)
+# Prevents CTO bottleneck and satisfies SOC 2 Segregation of Duties.
+# Tip: Append your Deputy Tech Lead's GitHub handle (e.g. `@planta94 @deputy-handle`)
+# once they are added as a repository collaborator.
 # =============================================================================
 
 # 1. Dependency Lock (Hard Gate)
-package.json                    @cto-handle @deputy-lead-handle
-package-lock.json               @cto-handle @deputy-lead-handle
-pnpm-lock.yaml                  @cto-handle @deputy-lead-handle
-yarn.lock                       @cto-handle @deputy-lead-handle
-pyproject.toml                  @cto-handle @deputy-lead-handle
-requirements*.txt               @cto-handle @deputy-lead-handle
-uv.lock                         @cto-handle @deputy-lead-handle
-poetry.lock                     @cto-handle @deputy-lead-handle
-pubspec.yaml                    @cto-handle @deputy-lead-handle
-pubspec.lock                    @cto-handle @deputy-lead-handle
+package.json                    @planta94
+package-lock.json               @planta94
+pnpm-lock.yaml                  @planta94
+yarn.lock                       @planta94
+pyproject.toml                  @planta94
+requirements*.txt               @planta94
+uv.lock                         @planta94
+poetry.lock                     @planta94
+pubspec.yaml                    @planta94
+pubspec.lock                    @planta94
 
-# 2. AI Context & Governance Files
-/AGENTS.md                      @cto-handle @deputy-lead-handle
-/.github/                       @cto-handle @deputy-lead-handle
-/.gemini/                       @cto-handle @deputy-lead-handle
-/.cursorrules                   @cto-handle @deputy-lead-handle
-/CLAUDE.md                      @cto-handle @deputy-lead-handle
-/.pre-commit-config.yaml        @cto-handle @deputy-lead-handle
+# 2. AI Context, Contract Lock & Governance Files
+/AGENTS.md                      @planta94
+/CONTRACT.lock                  @planta94
+/.github/                       @planta94
+/.gemini/                       @planta94
+/.cursorrules                   @planta94
+/CLAUDE.md                      @planta94
+/.pre-commit-config.yaml        @planta94
 
 # 3. Database Migrations & Schemas
-**/prisma/schema.prisma         @cto-handle @deputy-lead-handle
-**/migrations/**                @cto-handle @deputy-lead-handle
-**/alembic/**                   @cto-handle @deputy-lead-handle
+**/prisma/schema.prisma         @planta94
+**/migrations/**                @planta94
+**/alembic/**                   @planta94
 
 # 4. API & Event Contracts
-**/contracts/**                 @cto-handle @deputy-lead-handle
-**/*.openapi.yaml               @cto-handle @deputy-lead-handle
-**/*.openapi.json               @cto-handle @deputy-lead-handle
-**/*.schema.json                @cto-handle @deputy-lead-handle
+**/contracts/**                 @planta94
+**/*.openapi.yaml               @planta94
+**/*.openapi.json               @planta94
+**/*.schema.json                @planta94

@@ -94,10 +94,10 @@ Plant-A-Virtual-CTO/
 .\scripts\generate-sdk.ps1 -TargetRepo "..\service-a" -Stack "node"
 
 # Or fetch directly from remote GitHub Hub without cloning side-by-side:
-.\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "node" -RemoteHubUrl "https://github.com/your-org/Plant-A-Virtual-CTO.git"
+.\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "node" -RemoteHubUrl "https://github.com/planta94/plant-a-virtual-cto.git"
 ```
 
 ### 3. Export Tamper-Evident SOC 2 & ISO 27001 Audit Evidence Bundle
 ```powershell
-.\scripts\export-audit-evidence.ps1 -Repos @("your-org/service-a", "your-org/service-b", "your-org/Plant-A-Virtual-CTO")
+.\scripts\export-audit-evidence.ps1 -Repos @("planta94/service-a", "planta94/service-b", "planta94/plant-a-virtual-cto")
 ```

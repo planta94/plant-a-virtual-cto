@@ -1,4 +1,4 @@
-﻿name: Auto-Broadcast Standards to All Microservice Repos
+name: Auto-Broadcast Standards to All Microservice Repos
 
 on:
   push:
@@ -12,43 +12,65 @@ on:
 
 jobs:
   broadcast-standards:
-    name: "Sync AGENTS.md & CI Gates to All Repos"
+    name: "Sync AGENTS.md & CI Gates (${{ matrix.target.repo }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # List all your microservice, frontend, and mobile repositories here:
+        # List your microservice, frontend, and mobile repositories here:
         target:
           - { repo: "service-a", stack: "node" }
           - { repo: "service-b", stack: "python" }
           - { repo: "web-angular", stack: "angular" }
           - { repo: "mobile-app", stack: "mobile" }
     steps:
-      - name: Checkout Central Engineering Standards Hub
+      - name: Checkout Plant-A-Virtual-CTO Hub
         uses: actions/checkout@v4
         with:
           path: Plant-A-Virtual-CTO
 
+      - name: Check Target Repo & Token Readiness
+        id: check_target
+        env:
+          SYNC_TOKEN: ${{ secrets.ORG_SYNC_PAT || secrets.CROSS_REPO_SYNC_PAT }}
+          TARGET_FULL: "${{ github.repository_owner }}/${{ matrix.target.repo }}"
+        run: |
+          if [ -z "${SYNC_TOKEN}" ]; then
+            echo "::notice::Skipping auto-broadcast to ${TARGET_FULL}: Neither ORG_SYNC_PAT nor CROSS_REPO_SYNC_PAT secret is configured yet in repository settings."
+            echo "ready=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if ! git ls-remote "https://x-access-token:${SYNC_TOKEN}@github.com/${TARGET_FULL}.git" HEAD >/dev/null 2>&1; then
+            echo "::notice::Skipping auto-broadcast to ${TARGET_FULL}: Target repository does not exist yet or token lacks access."
+            echo "ready=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Target repository ${TARGET_FULL} is accessible. Proceeding with broadcast."
+          echo "ready=true" >> $GITHUB_OUTPUT
+
       - name: Checkout Target Repository (${{ matrix.target.repo }})
+        if: steps.check_target.outputs.ready == 'true'
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/${{ matrix.target.repo }}
-          token: ${{ secrets.CROSS_REPO_SYNC_PAT }}
+          token: ${{ secrets.ORG_SYNC_PAT || secrets.CROSS_REPO_SYNC_PAT }}
           path: target-repo
 
-      - name: Run Sync Script & Open/Push Sync Commit
+      - name: Run Sync Script & Push Sync Branch
+        if: steps.check_target.outputs.ready == 'true'
         run: |
           chmod +x ./Plant-A-Virtual-CTO/scripts/sync-microservice.sh
           ./Plant-A-Virtual-CTO/scripts/sync-microservice.sh ./target-repo "${{ matrix.target.stack }}"
           cd target-repo
-          git config user.name "sdge-standards-bot"
-          git config user.email "standards-bot@users.noreply.github.com"
+          git config user.name "plant-a-virtual-cto-bot"
+          git config user.email "bot@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
             git checkout -B chore/sync-Plant-A-Virtual-CTO
-            git add AGENTS.md CLAUDE.md .cursorrules .github/ .gemini/
+            git add AGENTS.md CLAUDE.md .cursorrules .pre-commit-config.yaml .github/ .gemini/
             git commit -m "chore(standards): auto-sync AGENTS.md and CI gates from Plant-A-Virtual-CTO [FAST-TRACK]"
             git push origin chore/sync-Plant-A-Virtual-CTO --force
           else
             echo "Target repo is already in sync."
           fi
-

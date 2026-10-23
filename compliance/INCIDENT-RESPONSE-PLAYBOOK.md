@@ -43,4 +43,4 @@ Even with `.pre-commit-config.yaml` and CI Gate 2 (Gitleaks), if a secret ever t
 
 | Date | Incident / Exercise ID | Type (`Real` or `Tabletop Drill`) | Severity | Summary of Event | Containment Action Taken | Root Cause & `AGENTS.md` Rule Added | Signed Off By |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `2026-10-24` | `INC-DRILL-001` | `Tabletop Drill` | `SEV-1 (Simulated)` | Simulated accidental commit of a staging Stripe API key in a PR to `service-a`. | Verified Gitleaks in CI Gate 2 blocked the PR within 18 seconds; practiced key rotation procedure. | Added `.pre-commit-config.yaml` local Gitleaks hook via `sync-microservice`. | `@cto-handle` |
+| `2026-10-24` | `INC-DRILL-001` | `Tabletop Drill` | `SEV-1 (Simulated)` | Simulated accidental commit of a staging Stripe API key in a PR to `service-a`. | Verified Gitleaks in CI Gate 2 blocked the PR within 18 seconds; practiced key rotation procedure. | Added `.pre-commit-config.yaml` local Gitleaks hook via `sync-microservice`. | `@planta94` |

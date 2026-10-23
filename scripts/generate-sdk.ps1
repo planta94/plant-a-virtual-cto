@@ -9,7 +9,7 @@
 .EXAMPLE
     .\scripts\generate-sdk.ps1 -TargetRepo "..\service-a" -Stack "node"
 .EXAMPLE
-    .\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "python" -RemoteHubUrl "https://github.com/your-org/Plant-A-Virtual-CTO.git" -ContractRef "main"
+    .\scripts\generate-sdk.ps1 -TargetRepo "." -Stack "python" -RemoteHubUrl "https://github.com/planta94/plant-a-virtual-cto.git" -ContractRef "main"
 #>
 param(
     [Parameter(Mandatory=$true)]

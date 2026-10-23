@@ -58,7 +58,7 @@ Instead of manually taking screenshots of GitHub PRs and branch protection setti
 
 1. **On-Demand CLI Exporter ([`scripts/export-audit-evidence.ps1`](../scripts/export-audit-evidence.ps1) & [`scripts/export-audit-evidence.sh`](../scripts/export-audit-evidence.sh)):**
    ```powershell
-   .\scripts\export-audit-evidence.ps1 -Repos @("your-org/service-a", "your-org/service-b", "your-org/Plant-A-Virtual-CTO")
+   .\scripts\export-audit-evidence.ps1 -Repos @("planta94/service-a", "planta94/service-b", "planta94/plant-a-virtual-cto")
    ```
    Exports a timestamped bundle (`compliance/evidence-bundles/audit-YYYY-MM-DD/`) containing:
    - `*-production-prs.json`: Full population of merged `main` PRs with author, reviewer approvals, timestamps, and commit SHAs.
