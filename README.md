@@ -1,5 +1,9 @@
 # Plant-A-Virtual-CTO
 
+<p align="center">
+  <img src="docs/assets/logo.png" width="180" alt="Plant-A-Virtual-CTO Logo" />
+</p>
+
 > **"Plant a Virtual CTO inside every repository so every developer's AI tool follows one shared engineering brain 24/7."**
 
 Welcome to **`Plant-A-Virtual-CTO`**—the central governance, contract, compliance, and AI-context hub for our microservice architecture.
