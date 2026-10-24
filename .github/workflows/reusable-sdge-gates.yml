@@ -166,6 +166,16 @@ jobs:
             echo "✅ CONTRACT.lock integrity verified (SHA256: ${ACTUAL_SDK_HASH})."
           fi
 
+          # 12. Verify Virtual CTO AGENTS.md Constitutional Priority (Line 1 Check)
+          if [ -f "AGENTS.md" ]; then
+            FIRST_LINE=$(head -n 1 AGENTS.md | tr -d '\r')
+            if [ "${FIRST_LINE}" != "<!-- BEGIN VIRTUAL-CTO-CONSTITUTION -->" ] && [ "${HAS_CTO_OVERRIDE}" != "true" ]; then
+              echo "::error::AGENTS.md Constitutional Priority violated! Line 1 of AGENTS.md must be '<!-- BEGIN VIRTUAL-CTO-CONSTITUTION -->'. Put service-specific rules in AGENTS.local.md instead."
+              exit 1
+            fi
+            echo "✅ AGENTS.md Constitutional Priority verified (Tier-1 CTO Constitution is at Line 1)."
+          fi
+
           echo "✅ Gate 1 (Change Control, Governance & Test Presence) Passed!"
 
   # ===========================================================================

@@ -43,8 +43,11 @@ Plant-A-Virtual-CTO/
 │   ├── QUARTERLY-ACCESS-AND-INFRA-CHECKLIST.md# Cloud IAM, DB Backups, Laptop BitLocker/FileVault, 24h Offboarding, Access Log
 │   └── INCIDENT-RESPONSE-PLAYBOOK.md          # SEV-1/2/3 Breach, Secret Leak Rotation & Tabletop Drill Register
 ├── docs/
+│   ├── assets/
+│   │   └── logo.png                           # 2D Minimalist Virtual CTO Mascot Logo
 │   ├── Plant-A-Virtual-CTO-Playbook.pdf       # Complete Executive & Developer Manual with 7 Vector Diagrams (PDF)
 │   ├── Plant-A-Virtual-CTO-Playbook.md        # Complete Executive & Developer Manual with 7 Mermaid Diagrams (MD)
+│   ├── TEAM-TRAINING-GUIDE.md                 # Plain-English 45-min training script, 6 scenarios & A-Z developer steps
 │   ├── SERVICE-A-AND-B-PLAYBOOK.md            # Step-by-step guide: Maintaining Service A vs. Starting Service B
 │   ├── TESTING-STRATEGY-AND-STANDARDS.md      # Full-Fledged 5-Layer Testing Standard (Anti-AI-Mock-Trap)
 │   ├── SOC2-ISO27001-COMPLIANCE.md            # Auditor-ready SOC 2 & ISO 27001:2022 control mapping

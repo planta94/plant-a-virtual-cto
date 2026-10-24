@@ -77,6 +77,30 @@ jobs:
             done
           fi
 
+      - name: Export GitHub Spec Issues to specs/SPEC-XXX.md Files
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          ISSUE_DATA=$(gh issue view "$CURRENT_ISSUE" --json title,body,author,assignees,url,updatedAt)
+          TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
+          SPEC_ID=$(echo "$TITLE" | grep -oE 'SPEC-[0-9]+' | head -n 1 || true)
+          if [ -n "$SPEC_ID" ]; then
+            SPEC_FILE="specs/${SPEC_ID}.md"
+            echo "📝 Auto-generating $SPEC_FILE from GitHub Issue #$CURRENT_ISSUE..."
+            echo "# $TITLE" > "$SPEC_FILE"
+            echo "" >> "$SPEC_FILE"
+            echo "- **Source GitHub Issue:** $(echo "$ISSUE_DATA" | jq -r '.url')" >> "$SPEC_FILE"
+            echo "- **Author:** @$(echo "$ISSUE_DATA" | jq -r '.author.login')" >> "$SPEC_FILE"
+            echo "- **Assignee:** @$(echo "$ISSUE_DATA" | jq -r '.assignees[0].login // "unassigned"')" >> "$SPEC_FILE"
+            echo "- **Last Updated:** $(echo "$ISSUE_DATA" | jq -r '.updatedAt')" >> "$SPEC_FILE"
+            echo "" >> "$SPEC_FILE"
+            echo "---" >> "$SPEC_FILE"
+            echo "" >> "$SPEC_FILE"
+            echo "$ISSUE_DATA" | jq -r '.body' >> "$SPEC_FILE"
+          fi
+
       - name: Regenerate specs/WIP-QUEUE.md from Live GitHub Issues
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -132,14 +156,14 @@ jobs:
             echo "$DONE_ROWS" >> specs/WIP-QUEUE.md
           fi
 
-      - name: Commit Updated specs/WIP-QUEUE.md (Zero Merge Conflicts)
+      - name: Commit Updated specs/WIP-QUEUE.md & specs/SPEC-XXX.md (Zero Merge Conflicts)
         run: |
           git config user.name "plant-a-virtual-cto-bot"
           git config user.email "bot@plant-a-virtual-cto.local"
-          if ! git diff --quiet specs/WIP-QUEUE.md; then
-            git add specs/WIP-QUEUE.md
-            git commit -m "chore(wip): auto-sync specs/WIP-QUEUE.md from live GitHub Issues [skip ci]"
+          git add specs/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(specs): auto-sync specs/WIP-QUEUE.md and SPEC-XXX.md from GitHub Issues"
             git push origin main
           else
-            echo "specs/WIP-QUEUE.md is already up to date."
+            echo "specs/ directory is already up to date."
           fi

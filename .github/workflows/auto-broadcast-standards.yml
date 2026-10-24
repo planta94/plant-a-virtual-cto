@@ -1,18 +1,21 @@
-name: Auto-Broadcast Standards to All Microservice Repos
+name: Auto-Broadcast Standards, Specs & Contracts to All Microservice Repos
 
 on:
   push:
     branches: [main]
     paths:
       - "AGENTS.md"
+      - "specs/**"
+      - "contracts/**"
       - "ai-context/**"
+      - "golden-examples/**"
       - "microservice-template/**"
       - ".github/workflows/reusable-sdge-gates.yml"
   workflow_dispatch:
 
 jobs:
   broadcast-standards:
-    name: "Sync AGENTS.md & CI Gates (${{ matrix.target.repo }})"
+    name: "Sync Rules, Specs, Contracts & SDKs (${{ matrix.target.repo }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -58,7 +61,7 @@ jobs:
           token: ${{ secrets.ORG_SYNC_PAT || secrets.CROSS_REPO_SYNC_PAT }}
           path: target-repo
 
-      - name: Run Sync Script & Push Sync Branch
+      - name: Run Sync Script (Rules + Specs + Contracts + SDKs) & Push Sync Branch
         if: steps.check_target.outputs.ready == 'true'
         run: |
           chmod +x ./Plant-A-Virtual-CTO/scripts/sync-microservice.sh
@@ -68,8 +71,8 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
             git checkout -B chore/sync-Plant-A-Virtual-CTO
-            git add AGENTS.md CLAUDE.md .cursorrules .pre-commit-config.yaml .github/ .gemini/
-            git commit -m "chore(standards): auto-sync AGENTS.md and CI gates from Plant-A-Virtual-CTO [FAST-TRACK]"
+            git add AGENTS.md CLAUDE.md .cursorrules .pre-commit-config.yaml CONTRACT.lock .github/ .gemini/ ai-context/ specs/ contracts/ golden-examples/ src/generated/contracts/
+            git commit -m "chore(virtual-cto): auto-sync specs, contracts, SDK types & AI rules from Plant-A-Virtual-CTO [FAST-TRACK]"
             git push origin chore/sync-Plant-A-Virtual-CTO --force
           else
             echo "Target repo is already in sync."
